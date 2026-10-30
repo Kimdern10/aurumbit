@@ -3,7 +3,7 @@
     use App\Support\Btc;
 
     $faqs = [
-        ['q' => 'What can I invest in?', 'a' => 'Bitcoin mining, gold mining, Ethereum staking, Solana staking and a top-10 crypto index. Every plan is funded from your BTC balance, and you can see the rate, term and exact earnings before you invest.'],
+        ['q' => 'What can I invest in?', 'a' => 'Bitcoin, gold, Ethereum, Solana and Crypto Mix plans. Every plan is funded from your BTC balance, and you can see the rate, term and exact earnings before you invest.'],
         ['q' => 'How much will I earn?', 'a' => 'Each plan has a rate for its full term. Your earnings build up every day and are paid with your capital at the end of the term. Use the calculator to see the exact figures for any plan and amount.'],
         ['q' => 'How do I deposit?', 'a' => 'Send Bitcoin to the deposit address shown in your dashboard, then enter the amount and the transaction ID. Your balance is credited once the transaction is confirmed on the blockchain.'],
         ['q' => 'How do withdrawals work?', 'a' => 'Request a withdrawal to your own Bitcoin address. We check the address, then send your BTC and show you the transaction ID so you can follow the payment on the blockchain.'],
@@ -19,7 +19,7 @@
     ];
 
     $icons = [
-        'bitcoin' => 'cpu-chip',
+        'bitcoin' => 'currency-dollar',
         'gold' => 'cube',
         'ethereum' => 'bolt',
         'solana' => 'sparkles',
@@ -42,11 +42,11 @@
 
                 <h1 data-reveal style="--reveal-delay: 80ms" class="mt-6 font-display text-[2.6rem] leading-[1.05] font-extrabold text-ink-950 sm:text-6xl lg:text-7xl dark:text-white">
                     {{ __('Grow your crypto with') }}
-                    <span class="text-brand-gradient animate-shine">{{ __('mining & staking plans.') }}</span>
+                    <span class="text-brand-gradient animate-shine">{{ __('fixed-term plans.') }}</span>
                 </h1>
 
                 <p data-reveal style="--reveal-delay: 160ms" class="mt-6 max-w-xl text-lg leading-relaxed text-ink-500 dark:text-ink-300">
-                    {{ __('Invest in Bitcoin mining, gold mining, Ethereum and Solana staking from one account. See your daily earnings and payout date before you invest, and withdraw to your own wallet.') }}
+                    {{ __('Choose Bitcoin, gold, Ethereum and Solana plans from one account. See your daily earnings and payout date before you invest, and withdraw to your own wallet.') }}
                 </p>
 
                 <div data-reveal style="--reveal-delay: 240ms" class="mt-9 flex flex-wrap gap-3">
@@ -233,7 +233,7 @@
                 @foreach ([
                     ['icon' => 'user-plus', 'title' => 'Create your account', 'text' => 'Sign up in a minute, then verify your identity.'],
                     ['icon' => 'arrow-down-tray', 'title' => 'Fund with Bitcoin', 'text' => 'Send BTC to your deposit address and enter the transaction ID.'],
-                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Pick mining, gold or staking and watch your earnings grow daily.'],
+                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Pick a Bitcoin, gold or crypto plan and watch your earnings grow daily.'],
                     ['icon' => 'arrow-up-tray', 'title' => 'Withdraw anytime', 'text' => 'Send your balance to your own Bitcoin wallet when a plan ends.'],
                 ] as $step)
                     <li data-reveal style="--reveal-delay: {{ $loop->index * 90 }}ms" class="relative rounded-3xl bg-white p-7 ring-1 ring-ink-100 dark:bg-ink-900 dark:ring-white/10">

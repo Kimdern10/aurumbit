@@ -1,7 +1,7 @@
 @php($site = \App\Models\Setting::get('site_name'))
 <x-legal-page :title="__('Terms of use')" :intro="__('The rules for using this website and your account.')">
     <h2>1. About this service</h2>
-    <p>{{ $site }} offers investment plans linked to Bitcoin and gold mining. You fund your account in Bitcoin, choose plans, and withdraw to your own Bitcoin wallet.</p>
+    <p>{{ $site }} offers fixed-term Bitcoin, gold and crypto plans. You fund your account in Bitcoin, choose plans, and withdraw to your own Bitcoin wallet.</p>
 
     <h2>2. Your account</h2>
     <ul>

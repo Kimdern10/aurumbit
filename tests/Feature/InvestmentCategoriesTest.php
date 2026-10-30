@@ -4,6 +4,7 @@ use App\Enums\PlanCategory;
 use App\Models\Investment;
 use App\Models\Plan;
 use App\Models\User;
+use Database\Seeders\PlanSeeder;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 
@@ -40,11 +41,11 @@ test('gold plans show and record the gold value of the investment', function () 
 test('the plans page can be filtered by category', function () {
     Plan::factory()->create(['name' => 'Hash Plan', 'category' => PlanCategory::Bitcoin]);
     Plan::factory()->gold()->create(['name' => 'Gold Plan']);
-    Plan::factory()->create(['name' => 'Stake Plan', 'category' => PlanCategory::Ethereum]);
+    Plan::factory()->create(['name' => 'Ether Plan', 'category' => PlanCategory::Ethereum]);
 
     $component = Livewire::actingAs(User::factory()->create())->test('pages::invest')
-        ->assertSee(['All plans', 'Bitcoin mining', 'Gold mining', 'Ethereum staking'])
-        ->assertDontSee('Solana staking');
+        ->assertSee(['All plans', 'Bitcoin plans', 'Gold plans', 'Ethereum plans'])
+        ->assertDontSee('Solana plans');
 
     $component->set('category', 'gold');
 
@@ -52,13 +53,13 @@ test('the plans page can be filtered by category', function () {
 });
 
 test('the landing page lists the new crypto plans with live prices', function () {
-    Plan::factory()->create(['name' => 'Ether Stake', 'category' => PlanCategory::Ethereum]);
+    Plan::factory()->create(['name' => 'Ethereum Starter', 'category' => PlanCategory::Ethereum]);
     Plan::factory()->create(['name' => 'Top 10 Index', 'category' => PlanCategory::CryptoIndex]);
 
     $this->get(route('home'))
-        ->assertSee('Ethereum staking')
-        ->assertSee('Crypto index')
-        ->assertSee('Ether Stake')
+        ->assertSee('Ethereum plans')
+        ->assertSee('Crypto Mix plans')
+        ->assertSee('Ethereum Starter')
         ->assertSee('data-price="eth"', false)
         ->assertSee('data-price="sol"', false);
 });
@@ -76,7 +77,7 @@ test('admins filter plans by category and create one for that category', functio
         ->assertSet('category', 'gold')
         ->set('name', 'Solana Max')
         ->set('category', 'solana')
-        ->set('summary', 'Solana staking term.')
+        ->set('summary', 'Solana plan.')
         ->set('minBtc', '0.01')
         ->call('save')
         ->assertHasNoErrors();
@@ -113,3 +114,14 @@ test('plan pages show rates without risk labels', function () {
         ->assertSee('3.5%')
         ->assertDontSee('Very high risk');
 });
+
+test('no page claims mining or staking', function (string $route) {
+    $this->seed(PlanSeeder::class);
+
+    $this->get(route($route))
+        ->assertOk()
+        ->assertDontSee('mining')
+        ->assertDontSee('Mining')
+        ->assertDontSee('staking')
+        ->assertDontSee('hashrate');
+})->with(['home', 'legal.terms', 'legal.risk', 'legal.privacy']);

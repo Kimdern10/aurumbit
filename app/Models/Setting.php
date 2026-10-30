@@ -27,9 +27,9 @@ class Setting extends Model
      */
     public const array DEFAULTS = [
         'site_name' => 'Hashvale',
-        'tagline' => 'Mining-backed crypto and gold investing, made simple.',
+        'tagline' => 'Fixed-term crypto and gold plans, made simple.',
         'support_email' => 'support@hashvale.test',
-        'seo_description' => 'Hashvale offers Bitcoin mining, gold mining, Ethereum and Solana staking and crypto index plans with clear rates, a returns calculator and a full audit trail.',
+        'seo_description' => 'Hashvale offers fixed-term Bitcoin, gold, Ethereum and Solana plans with clear rates, a returns calculator and a full transaction history.',
         'deposit_address' => '',
         'explorer_tx_url' => 'https://mempool.space/tx/',
         'min_deposit_sats' => '100000',

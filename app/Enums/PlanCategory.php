@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * The kinds of plan on offer. Every plan is funded from the user's BTC balance.
+ * The groups plans are shown in. Every plan is funded from, and paid to, the user's BTC balance.
  */
 enum PlanCategory: string
 {
@@ -16,11 +16,11 @@ enum PlanCategory: string
     public function label(): string
     {
         return match ($this) {
-            self::Bitcoin => 'Bitcoin mining',
-            self::Gold => 'Gold mining',
-            self::Ethereum => 'Ethereum staking',
-            self::Solana => 'Solana staking',
-            self::CryptoIndex => 'Crypto index',
+            self::Bitcoin => 'Bitcoin plans',
+            self::Gold => 'Gold plans',
+            self::Ethereum => 'Ethereum plans',
+            self::Solana => 'Solana plans',
+            self::CryptoIndex => 'Crypto Mix plans',
         };
     }
 
@@ -69,11 +69,11 @@ enum PlanCategory: string
     public function description(): string
     {
         return match ($this) {
-            self::Bitcoin => 'Earn from a share of Bitcoin mining hashrate.',
-            self::Gold => 'Earn from gold mining operations, with the gold value of your plan shown at the start.',
-            self::Ethereum => 'Earn from Ethereum network staking rewards.',
-            self::Solana => 'Earn from Solana network staking rewards.',
-            self::CryptoIndex => 'A spread across the largest crypto assets.',
+            self::Bitcoin => 'Fixed-term plans with a set rate, paid in BTC.',
+            self::Gold => 'Fixed-term plans that show the gold value of your plan at today\'s price.',
+            self::Ethereum => 'Fixed-term Ethereum plans, funded and paid in BTC.',
+            self::Solana => 'Fixed-term Solana plans, funded and paid in BTC.',
+            self::CryptoIndex => 'Fixed-term plans across the crypto range, paid in BTC.',
         };
     }
 }

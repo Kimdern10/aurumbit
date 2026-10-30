@@ -7,12 +7,12 @@ use Illuminate\Support\Facades\Http;
 
 test('the home page lists active plans with risk wording and never waits on the price API', function () {
     Http::preventStrayRequests();
-    Plan::factory()->create(['name' => 'Hashrate Core']);
+    Plan::factory()->create(['name' => 'Bitcoin Plus']);
     Plan::factory()->inactive()->create(['name' => 'Closed Plan']);
 
     $this->get(route('home'))
         ->assertOk()
-        ->assertSee('Hashrate Core')
+        ->assertSee('Bitcoin Plus')
         ->assertDontSee('Closed Plan')
         ->assertSee('How much will I earn?', false)
         ->assertSee('data-calculator', false)

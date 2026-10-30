@@ -43,7 +43,7 @@ test('customers see only the customer menu', function () {
 });
 
 test('the dashboard shows the plan calculator and a getting started checklist', function () {
-    Plan::factory()->create(['name' => 'Hashrate Core']);
+    Plan::factory()->create(['name' => 'Bitcoin Plus']);
 
     $this->actingAs(User::factory()->create())->get(route('dashboard'))
         ->assertSee('BTC plan calculator')

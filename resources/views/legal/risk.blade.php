@@ -1,15 +1,12 @@
 @php($site = \App\Models\Setting::get('site_name'))
-<x-legal-page :title="__('Risk disclosure')" :intro="__('Please read this before you put money into any crypto-asset or mining plan, here or anywhere else.')">
+<x-legal-page :title="__('Risk disclosure')" :intro="__('Please read this before you put money into any crypto-asset plan, here or anywhere else.')">
     <h2>{{ __('You can lose all the money you invest') }}</h2>
     <p>Bitcoin and other crypto-assets are highly volatile. Their price can fall sharply and quickly, and may go to zero. Gold prices also rise and fall. Any plan linked to these assets can lose value.</p>
 
     <h2>How plan rates work</h2>
-    <p>Each plan on {{ $site }} shows a <strong>rate for its full term</strong>, and earnings are added to your plan every day at that rate. The rate is set from expected mining income, which depends on things nobody fully controls, including:</p>
+    <p>Each plan on {{ $site }} shows a <strong>rate for its full term</strong>, and earnings are added to your plan every day at that rate. Things nobody fully controls can affect the business behind the plans, including:</p>
     <ul>
-        <li>the market price of Bitcoin and gold;</li>
-        <li>Bitcoin network difficulty and the block reward, which halves roughly every four years;</li>
-        <li>energy prices, equipment failure and hosting costs;</li>
-        <li>for gold, ore grades, mine operations, permits, weather and security;</li>
+        <li>the market prices of Bitcoin, gold and other crypto-assets;</li>
         <li>changes in law, tax and regulation.</li>
     </ul>
     <p>If these change badly, the business behind the plans may struggle to pay, and you could lose some or all of your money.</p>

@@ -43,25 +43,25 @@ class SampleDataSeeder extends Seeder
 
         // Emma: deposits, two plans (one finished), a paid withdrawal and a pending one.
         $this->at(40, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 25_000_000, str_repeat('a1', 32)), $admin));
-        $this->at(38, fn () => $wallet->invest($emma, $plans['hashrate-starter'], 5_000_000));
-        $this->at(30, fn () => $wallet->invest($emma, $plans['hard-rock-gold'], 8_000_000));
-        $this->at(23, fn () => $wallet->settle($emma->investments()->where('plan_id', $plans['hashrate-starter']->id)->firstOrFail()));
+        $this->at(38, fn () => $wallet->invest($emma, $plans['bitcoin-starter'], 5_000_000));
+        $this->at(30, fn () => $wallet->invest($emma, $plans['gold-plus'], 8_000_000));
+        $this->at(23, fn () => $wallet->settle($emma->investments()->where('plan_id', $plans['bitcoin-starter']->id)->firstOrFail()));
         $this->at(20, fn () => $wallet->approveWithdrawal($wallet->requestWithdrawal($emma, 2_000_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'), $admin, str_repeat('e5', 32)));
         $this->at(12, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 10_000_000, str_repeat('b2', 32)), $admin));
-        $this->at(6, fn () => $wallet->invest($emma, $plans['hashrate-core'], 6_000_000));
+        $this->at(6, fn () => $wallet->invest($emma, $plans['bitcoin-plus'], 6_000_000));
         $this->at(1, fn () => $wallet->requestWithdrawal($emma, 1_500_000, '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'));
 
         // James (invited by Emma): first deposit pays Emma a referral bonus.
         $this->at(15, fn () => $wallet->approveDeposit($wallet->requestDeposit($james, 12_000_000, str_repeat('d4', 32)), $admin));
-        $this->at(14, fn () => $wallet->invest($james, $plans['alluvial-gold'], 4_000_000));
+        $this->at(14, fn () => $wallet->invest($james, $plans['gold-starter'], 4_000_000));
         $this->at(3, fn () => $wallet->rejectWithdrawal($wallet->requestWithdrawal($james, 1_000_000, 'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297'), $admin, 'Please confirm this address belongs to you.'));
 
         // Waiting for the admin.
         $this->at(2, fn () => $wallet->requestDeposit($olivia, 3_000_000, str_repeat('c3', 32)));
         $this->at(0, fn () => Deposit::factory()->for($james)->create(['amount_sats' => 750_000]));
 
-        $wallet->accrue($emma->investments()->where('plan_id', $plans['hard-rock-gold']->id)->firstOrFail());
-        $wallet->accrue($emma->investments()->where('plan_id', $plans['hashrate-core']->id)->firstOrFail());
+        $wallet->accrue($emma->investments()->where('plan_id', $plans['gold-plus']->id)->firstOrFail());
+        $wallet->accrue($emma->investments()->where('plan_id', $plans['bitcoin-plus']->id)->firstOrFail());
         $wallet->accrue($james->investments()->firstOrFail());
 
         Announcement::factory()->create([
