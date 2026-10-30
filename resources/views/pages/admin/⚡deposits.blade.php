@@ -91,7 +91,7 @@ new #[Title('Deposits')] class extends Component {
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
-        <flux:table :paginate="$this->deposits" class="[&_td]:px-4 [&_th]:px-4">
+        <flux:table :paginate="$this->deposits" class="[&_td]:px-4! [&_th]:px-4!">
             <flux:table.columns>
                 <flux:table.column>{{ __('User') }}</flux:table.column>
                 <flux:table.column>{{ __('Amount') }}</flux:table.column>

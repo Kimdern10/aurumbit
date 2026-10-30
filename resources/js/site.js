@@ -83,6 +83,7 @@ function renderPrices(data) {
         document.querySelectorAll(`[data-change="${asset}"]`).forEach((el) => {
             if (change == null) return;
             el.textContent = `${change > 0 ? '+' : ''}${change.toFixed(2)}%`;
+            el.classList.remove('text-zinc-400');
             el.classList.toggle('text-green-600', change >= 0);
             el.classList.toggle('dark:text-green-400', change >= 0);
             el.classList.toggle('text-red-600', change < 0);

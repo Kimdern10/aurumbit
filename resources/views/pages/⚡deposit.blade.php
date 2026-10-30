@@ -86,7 +86,7 @@ new #[Title('Deposit')] class extends Component {
 
     <flux:card class="!p-0 overflow-hidden">
         <div class="px-4 pt-4"><flux:heading>{{ __('Your deposits') }}</flux:heading></div>
-        <flux:table :paginate="$this->deposits" class="[&_td]:px-4 [&_th]:px-4">
+        <flux:table :paginate="$this->deposits" class="[&_td]:px-4! [&_th]:px-4!">
             <flux:table.columns>
                 <flux:table.column>{{ __('Date') }}</flux:table.column>
                 <flux:table.column>{{ __('Amount') }}</flux:table.column>

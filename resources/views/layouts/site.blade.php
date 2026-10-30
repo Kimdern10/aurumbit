@@ -28,8 +28,8 @@
                         @auth
                             <flux:button :href="route('dashboard')" variant="primary" size="sm" icon-trailing="arrow-right">{{ __('Dashboard') }}</flux:button>
                         @else
-                            <flux:button :href="route('login')" variant="ghost" size="sm" class="hidden sm:inline-flex">{{ __('Log in') }}</flux:button>
-                            <flux:button :href="route('register')" variant="primary" size="sm">{{ __('Open demo account') }}</flux:button>
+                            <span class="hidden sm:block"><flux:button :href="route('login')" variant="ghost" size="sm">{{ __('Log in') }}</flux:button></span>
+                            <flux:button :href="route('register')" variant="primary" size="sm"><span class="sm:hidden">{{ __('Sign up') }}</span><span class="hidden sm:inline">{{ __('Open demo account') }}</span></flux:button>
                         @endauth
 
                         <details class="group relative md:hidden">

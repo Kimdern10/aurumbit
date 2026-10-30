@@ -138,7 +138,7 @@ new #[Title('Plans')] class extends Component {
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
-        <flux:table class="[&_td]:px-4 [&_th]:px-4">
+        <flux:table class="[&_td]:px-4! [&_th]:px-4!">
             <flux:table.columns>
                 <flux:table.column>{{ __('Plan') }}</flux:table.column>
                 <flux:table.column>{{ __('Limits') }}</flux:table.column>

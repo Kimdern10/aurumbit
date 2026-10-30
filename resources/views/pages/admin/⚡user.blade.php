@@ -91,7 +91,7 @@ new #[Title('User')] class extends Component {
 
         <flux:card class="!p-0 overflow-hidden xl:col-span-2">
             <div class="px-4 pt-4"><flux:heading>{{ __('Recent balance changes') }}</flux:heading></div>
-            <flux:table class="[&_td]:px-4 [&_th]:px-4">
+            <flux:table class="[&_td]:px-4! [&_th]:px-4!">
                 <flux:table.columns>
                     <flux:table.column>{{ __('Date') }}</flux:table.column>
                     <flux:table.column>{{ __('Details') }}</flux:table.column>

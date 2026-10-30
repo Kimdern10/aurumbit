@@ -82,7 +82,7 @@
                         <span class="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-medium text-gold-200">{{ __('Simulated') }}</span>
                     </div>
                     <p class="mt-3 font-display text-3xl font-bold tabular-nums">0.2500 <span class="text-base text-zinc-400">BTC</span></p>
-                    <svg viewBox="0 0 300 70" class="mt-4 h-16 w-full" aria-hidden="true">
+                    <svg viewBox="0 0 300 70" preserveAspectRatio="none" class="mt-4 h-16 w-full" aria-hidden="true">
                         <defs>
                             <linearGradient id="hero-area" x1="0" x2="0" y1="0" y2="1">
                                 <stop offset="0" stop-color="#e0b434" stop-opacity="0.45" />
@@ -90,7 +90,7 @@
                             </linearGradient>
                         </defs>
                         <path d="M0 55 L30 50 L60 52 L90 40 L120 44 L150 30 L180 34 L210 22 L240 26 L270 14 L300 18 L300 70 L0 70 Z" fill="url(#hero-area)" />
-                        <path d="M0 55 L30 50 L60 52 L90 40 L120 44 L150 30 L180 34 L210 22 L240 26 L270 14 L300 18" fill="none" stroke="#e0b434" stroke-width="2.5" stroke-linejoin="round" />
+                        <path d="M0 55 L30 50 L60 52 L90 40 L120 44 L150 30 L180 34 L210 22 L240 26 L270 14 L300 18" fill="none" stroke="#e0b434" stroke-width="2.5" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
                     </svg>
                     <div class="mt-3 grid grid-cols-2 gap-3 text-xs">
                         <div class="rounded-lg bg-white/5 p-3"><p class="text-zinc-400">{{ __('BTC mining') }}</p><p class="mt-1 font-semibold">0.1500 BTC</p></div>

@@ -59,7 +59,7 @@ new #[Title('Audit log')] class extends Component {
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
-        <flux:table :paginate="$this->entries" class="[&_td]:px-4 [&_th]:px-4">
+        <flux:table :paginate="$this->entries" class="[&_td]:px-4! [&_th]:px-4!">
             <flux:table.columns>
                 <flux:table.column>#</flux:table.column>
                 <flux:table.column>{{ __('When') }}</flux:table.column>
