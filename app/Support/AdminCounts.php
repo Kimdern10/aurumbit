@@ -6,6 +6,7 @@ use App\Enums\KycStatus;
 use App\Enums\RequestStatus;
 use App\Models\Deposit;
 use App\Models\KycSubmission;
+use App\Models\SupportTicket;
 use App\Models\Withdrawal;
 
 /**
@@ -14,7 +15,7 @@ use App\Models\Withdrawal;
 class AdminCounts
 {
     /**
-     * @return array{deposits: int, withdrawals: int, kyc: int}
+     * @return array{deposits: int, withdrawals: int, kyc: int, tickets: int}
      */
     public static function pending(): array
     {
@@ -22,6 +23,7 @@ class AdminCounts
             'deposits' => Deposit::query()->where('status', RequestStatus::Pending)->count(),
             'withdrawals' => Withdrawal::query()->where('status', RequestStatus::Pending)->count(),
             'kyc' => KycSubmission::query()->where('status', KycStatus::Pending)->count(),
+            'tickets' => SupportTicket::query()->where('status', 'open')->count(),
         ]);
     }
 }

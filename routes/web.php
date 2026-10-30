@@ -4,6 +4,8 @@ use App\Http\Controllers\Admin\KycFileController;
 use App\Http\Controllers\HomeController;
 use App\Http\Controllers\PriceController;
 use App\Http\Controllers\SitemapController;
+use App\Http\Controllers\StatementController;
+use App\Http\Middleware\RedirectAdminsToAdminArea;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', HomeController::class)->name('home');
@@ -14,7 +16,7 @@ Route::view('risk-disclosure', 'legal.risk')->name('legal.risk');
 Route::get('sitemap.xml', [SitemapController::class, 'sitemap'])->name('sitemap');
 Route::get('robots.txt', [SitemapController::class, 'robots'])->name('robots');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', RedirectAdminsToAdminArea::class])->group(function () {
     Route::livewire('dashboard', 'pages::dashboard')->name('dashboard');
     Route::livewire('invest', 'pages::invest')->name('invest');
     Route::livewire('investments', 'pages::investments')->name('investments');
@@ -23,9 +25,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::livewire('transactions', 'pages::transactions')->name('transactions');
     Route::livewire('verification', 'pages::kyc')->name('kyc');
     Route::livewire('referrals', 'pages::referrals')->name('referrals');
+    Route::livewire('notifications', 'pages::notifications')->name('notifications');
+    Route::livewire('support', 'pages::support')->name('support');
+    Route::livewire('support/{ticket}', 'pages::support-ticket')->name('support.show');
+    Route::get('transactions/statement.csv', StatementController::class)->name('transactions.export');
 });
 
-Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+Route::middleware(['auth', 'admin'])->prefix('admin')->name('admin.')->group(function () {
     Route::livewire('/', 'pages::admin.dashboard')->name('dashboard');
     Route::livewire('users', 'pages::admin.users')->name('users');
     Route::livewire('users/{user}', 'pages::admin.user')->name('users.show');
@@ -36,6 +42,8 @@ Route::middleware(['auth', 'verified', 'admin'])->prefix('admin')->name('admin.'
     Route::livewire('verifications', 'pages::admin.kyc')->name('kyc');
     Route::get('verifications/{kycSubmission}/{file}', KycFileController::class)->whereIn('file', ['document', 'selfie'])->name('kyc.file');
     Route::livewire('announcements', 'pages::admin.announcements')->name('announcements');
+    Route::livewire('support', 'pages::admin.tickets')->name('tickets');
+    Route::livewire('support/{ticket}', 'pages::admin.ticket')->name('tickets.show');
     Route::livewire('audit-log', 'pages::admin.ledger')->name('ledger');
     Route::livewire('settings', 'pages::admin.settings')->name('settings');
 });

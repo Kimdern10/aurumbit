@@ -13,7 +13,7 @@ use App\Services\WalletService;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
-$adminRoutes = ['admin.dashboard', 'admin.users', 'admin.plans', 'admin.deposits', 'admin.withdrawals', 'admin.investments', 'admin.kyc', 'admin.announcements', 'admin.ledger', 'admin.settings'];
+$adminRoutes = ['admin.dashboard', 'admin.users', 'admin.plans', 'admin.deposits', 'admin.withdrawals', 'admin.investments', 'admin.kyc', 'admin.announcements', 'admin.tickets', 'admin.ledger', 'admin.settings'];
 
 test('admins can open every admin page', function (string $route) {
     $admin = User::factory()->admin()->create();

@@ -21,13 +21,35 @@ test('every user page opens without any demo wording', function (string $route) 
         ->assertDontSee('demo', false)
         ->assertDontSee('Demo')
         ->assertDontSee('simulated');
-})->with(['dashboard', 'invest', 'investments', 'deposit', 'withdraw', 'transactions', 'kyc', 'referrals']);
+})->with(['dashboard', 'invest', 'investments', 'deposit', 'withdraw', 'transactions', 'kyc', 'referrals', 'notifications', 'support']);
 
-test('guests and unverified users cannot open the wallet pages', function () {
+test('guests must log in, and new users do not need an email code', function () {
     $this->get(route('withdraw'))->assertRedirect(route('login'));
 
     $this->actingAs(User::factory()->unverified()->create())
-        ->get(route('withdraw'))->assertRedirect(route('verification.notice'));
+        ->get(route('withdraw'))->assertOk();
+});
+
+test('admins are kept out of the customer area', function (string $route) {
+    $this->actingAs(User::factory()->admin()->create())
+        ->get(route($route))->assertRedirect(route('admin.dashboard'));
+})->with(['dashboard', 'deposit', 'invest', 'support']);
+
+test('customers see only the customer menu', function () {
+    $this->actingAs(User::factory()->create())->get(route('dashboard'))
+        ->assertSee(route('withdraw'))
+        ->assertDontSee(route('admin.dashboard'))
+        ->assertDontSee('Admin panel');
+});
+
+test('the dashboard shows the plan calculator and a getting started checklist', function () {
+    Plan::factory()->create(['name' => 'Hashrate Core']);
+
+    $this->actingAs(User::factory()->create())->get(route('dashboard'))
+        ->assertSee('BTC plan calculator')
+        ->assertSee('data-calculator', false)
+        ->assertSee('Getting started')
+        ->assertSee('Make your first deposit');
 });
 
 test('the dashboard shows published announcements only', function () {

@@ -7,6 +7,7 @@ use App\Enums\RequestStatus;
 use App\Models\Announcement;
 use App\Models\Investment;
 use App\Models\LedgerEntry;
+use App\Models\Plan;
 use App\Services\MarketPrices;
 use App\Support\Btc;
 use Illuminate\Database\Eloquent\Collection;
@@ -76,6 +77,33 @@ new #[Title('Dashboard')] class extends Component {
         return Auth::user()->ledgerEntries()->latest('id')->limit(6)->get();
     }
 
+    /**
+     * @return Collection<int, Plan>
+     */
+    #[Computed]
+    public function plans(): Collection
+    {
+        return Plan::query()->available()->get();
+    }
+
+    /**
+     * The first steps a new user should take, and whether each is done.
+     *
+     * @return list<array{label: string, done: bool, url: string}>
+     */
+    #[Computed]
+    public function gettingStarted(): array
+    {
+        $user = Auth::user();
+
+        return [
+            ['label' => __('Verify your identity'), 'done' => $user->isKycVerified(), 'url' => route('kyc')],
+            ['label' => __('Make your first deposit'), 'done' => $user->deposits()->where('status', RequestStatus::Approved)->exists(), 'url' => route('deposit')],
+            ['label' => __('Choose your first plan'), 'done' => $user->investments()->exists(), 'url' => route('invest')],
+            ['label' => __('Turn on two-step login'), 'done' => $user->two_factor_confirmed_at !== null, 'url' => route('security.edit')],
+        ];
+    }
+
     #[Computed]
     public function btcPriceCents(): ?int
     {
@@ -102,6 +130,27 @@ new #[Title('Dashboard')] class extends Component {
             <flux:callout.text>{{ $announcement->body }}</flux:callout.text>
         </flux:callout>
     @endforeach
+
+    @php
+        $steps = collect($this->gettingStarted);
+    @endphp
+    @if ($steps->contains('done', false))
+        <flux:card>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <flux:heading>{{ __('Getting started') }}</flux:heading>
+                <flux:text class="text-sm">{{ __(':done of :total done', ['done' => $steps->where('done', true)->count(), 'total' => $steps->count()]) }}</flux:text>
+            </div>
+            <flux:progress class="mt-3" :value="intdiv($steps->where('done', true)->count() * 100, $steps->count())" />
+            <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                @foreach ($steps as $step)
+                    <a href="{{ $step['url'] }}" wire:navigate @class(['flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition', 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300' => $step['done'], 'border-zinc-200 hover:border-gold-400 dark:border-white/10' => ! $step['done']])>
+                        <flux:icon :name="$step['done'] ? 'check-circle' : 'arrow-right-circle'" variant="mini" @class(['shrink-0', 'text-gold-600' => ! $step['done']]) />
+                        {{ $step['label'] }}
+                    </a>
+                @endforeach
+            </div>
+        </flux:card>
+    @endif
 
     @unless (auth()->user()->isKycVerified())
         <flux:callout color="sky" icon="identification">
@@ -157,6 +206,16 @@ new #[Title('Dashboard')] class extends Component {
             </x-chart.donut>
         </flux:card>
     </div>
+
+    @if ($this->plans->isNotEmpty())
+        <div>
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <flux:heading class="flex items-center gap-2"><flux:icon.calculator variant="mini" class="text-gold-600" /> {{ __('BTC plan calculator') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('Your balance: :amount BTC', ['amount' => Btc::format($this->totals['balance'])]) }}</flux:text>
+            </div>
+            <x-returns-calculator class="mt-3" :plans="$this->plans" :btc-price-cents="$this->btcPriceCents" />
+        </div>
+    @endif
 
     <div class="grid gap-6 xl:grid-cols-2">
         <flux:card>

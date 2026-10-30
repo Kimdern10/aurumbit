@@ -41,12 +41,15 @@ new #[Title('Transactions')] class extends Component {
             <flux:heading size="xl">{{ __('Transactions') }}</flux:heading>
             <flux:text class="mt-1">{{ __('Every change to your balance, with the balance after it.') }}</flux:text>
         </div>
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+        <flux:button :href="route('transactions.export')" icon="arrow-down-tray">{{ __('Download statement (CSV)') }}</flux:button>
         <flux:select wire:model.live="type" class="sm:max-w-56">
             <flux:select.option value="">{{ __('All types') }}</flux:select.option>
             @foreach (LedgerType::cases() as $case)
                 <flux:select.option :value="$case->value">{{ $case->label() }}</flux:select.option>
             @endforeach
         </flux:select>
+        </div>
     </div>
 
     <flux:card class="!p-0 overflow-hidden">

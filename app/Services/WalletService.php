@@ -13,6 +13,7 @@ use App\Models\Plan;
 use App\Models\Setting;
 use App\Models\User;
 use App\Models\Withdrawal;
+use App\Notifications\AccountActivity;
 use App\Support\Btc;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
@@ -51,6 +52,8 @@ class WalletService
             $this->apply($user, $deposit->amount_sats, LedgerType::Deposit, 'Deposit #'.$deposit->id.' credited', $deposit, $admin);
             $this->markReviewed($deposit, RequestStatus::Approved, $admin);
 
+            $user->notify(new AccountActivity('Deposit credited', Btc::format($deposit->amount_sats).' BTC has been added to your balance.', route('transactions'), 'success'));
+
             $this->payReferralBonus($user, $deposit, $admin);
         });
     }
@@ -58,7 +61,10 @@ class WalletService
     public function rejectDeposit(Deposit $deposit, User $admin, ?string $note = null): void
     {
         DB::transaction(function () use ($deposit, $admin, $note): void {
-            $this->markReviewed($this->lockPendingDeposit($deposit->id), RequestStatus::Rejected, $admin, $note);
+            $locked = $this->lockPendingDeposit($deposit->id);
+            $this->markReviewed($locked, RequestStatus::Rejected, $admin, $note);
+
+            $locked->user->notify(new AccountActivity('Deposit not credited', 'Your deposit of '.Btc::format($locked->amount_sats).' BTC was rejected'.($note ? ': '.$note : '.'), route('deposit'), 'danger'));
         });
     }
 
@@ -104,6 +110,8 @@ class WalletService
             $locked = $this->lockPendingWithdrawal($withdrawal->id);
             $locked->forceFill(['payout_txid' => strtolower($payoutTxid)]);
             $this->markReviewed($locked, RequestStatus::Approved, $admin, $note);
+
+            $locked->user->notify(new AccountActivity('Withdrawal sent', Btc::format($locked->amount_sats).' BTC has been sent to your wallet.', route('withdraw'), 'success'));
         });
     }
 
@@ -118,6 +126,8 @@ class WalletService
 
             $this->apply($user, $withdrawal->amount_sats, LedgerType::WithdrawalRefund, 'Withdrawal #'.$withdrawal->id.' rejected, amount returned', $withdrawal, $admin);
             $this->markReviewed($withdrawal, RequestStatus::Rejected, $admin, $note);
+
+            $user->notify(new AccountActivity('Withdrawal rejected', Btc::format($withdrawal->amount_sats).' BTC is back in your balance'.($note ? '. Reason: '.$note : '.'), route('withdraw'), 'danger'));
         });
     }
 
@@ -200,6 +210,8 @@ class WalletService
             }
 
             $locked->forceFill(['earned_sats' => $earned, 'status' => InvestmentStatus::Completed, 'settled_at' => now()])->save();
+
+            $user->notify(new AccountActivity('Plan completed', $locked->plan->name.' finished. '.Btc::format($locked->amount_sats + $earned).' BTC (including '.Btc::format($earned).' BTC profit) is in your balance.', route('investments'), 'success'));
         });
     }
 
@@ -261,6 +273,8 @@ class WalletService
         $referrer = $this->lockUser($user->referred_by_id);
 
         $this->apply($referrer, $bonus, LedgerType::ReferralBonus, 'Referral bonus for '.$user->name, $deposit, $admin);
+
+        $referrer->notify(new AccountActivity('Referral bonus', 'You earned '.Btc::format($bonus).' BTC because someone you invited made their first deposit.', route('referrals'), 'success'));
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use App\Enums\KycStatus;
 use App\Models\KycSubmission;
+use App\Notifications\AccountActivity;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -67,6 +68,10 @@ new #[Title('Verifications')] class extends Component {
             'reviewed_by' => Auth::id(),
             'reviewed_at' => now(),
         ])->save();
+
+        $submission->user->notify($this->decision === 'reject'
+            ? new AccountActivity('Identity check rejected', 'Please send new documents.'.($this->note ? ' Reason: '.$this->note : ''), route('kyc'), 'danger')
+            : new AccountActivity('Identity verified', 'Your identity is verified. You can now withdraw.', route('withdraw'), 'success'));
 
         Flux::modal('review-kyc')->close();
         Flux::toast(variant: 'success', text: $this->decision === 'reject' ? __('Verification rejected.') : __('Identity verified.'));

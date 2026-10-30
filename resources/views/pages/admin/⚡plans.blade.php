@@ -120,6 +120,25 @@ new #[Title('Plans')] class extends Component {
         Flux::toast(variant: 'success', text: __('Plan saved. Running investments keep their original terms.'));
     }
 
+    /**
+     * What a customer would earn on 0.1 BTC with the rate and term being typed.
+     *
+     * @return array{daily: int, profit: int, total: int, days: int}|null
+     */
+    public function preview(): ?array
+    {
+        $days = (int) $this->durationDays;
+
+        if ($days < 1 || preg_match('/^\d{1,3}(\.\d{1,2})?$/', $this->targetPercent) !== 1) {
+            return null;
+        }
+
+        [$whole, $fraction] = array_pad(explode('.', $this->targetPercent), 2, '');
+        $profit = intdiv(10_000_000 * ((int) $whole * 100 + (int) str_pad($fraction, 2, '0')), 10000);
+
+        return ['daily' => intdiv($profit, $days), 'profit' => $profit, 'total' => 10_000_000 + $profit, 'days' => $days];
+    }
+
     public function toggle(Plan $plan): void
     {
         $plan->update(['is_active' => ! $plan->is_active]);
@@ -184,8 +203,8 @@ new #[Title('Plans')] class extends Component {
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="minBtc" :label="__('Minimum (BTC)')" inputmode="decimal" />
                 <flux:input wire:model="maxBtc" :label="__('Maximum (BTC)')" inputmode="decimal" :placeholder="__('No limit')" />
-                <flux:input wire:model="durationDays" type="number" min="1" :label="__('Term (days)')" />
-                <flux:input wire:model="targetPercent" :label="__('Rate for the whole term (%)')" inputmode="decimal" :description="__('e.g. 3.5 means 3.5% profit after the full term, spread evenly per day.')" />
+                <flux:input wire:model.live.debounce.400ms="durationDays" type="number" min="1" :label="__('Term (days)')" />
+                <flux:input wire:model.live.debounce.400ms="targetPercent" :label="__('Rate for the whole term (%)')" inputmode="decimal" :description="__('e.g. 3.5 means 3.5% profit after the full term, spread evenly per day.')" />
                 <flux:select wire:model="riskLevel" :label="__('Risk level')">
                     @foreach (Plan::RISK_LEVELS as $value => $label)
                         <flux:select.option :value="$value">{{ $label }}</flux:select.option>
@@ -193,6 +212,12 @@ new #[Title('Plans')] class extends Component {
                 </flux:select>
                 <flux:input wire:model="sortOrder" type="number" min="0" :label="__('Order')" />
             </div>
+            @if ($preview = $this->preview())
+                <div class="rounded-lg bg-gold-50 p-3 text-sm text-gold-900 dark:bg-gold-400/10 dark:text-gold-100">
+                    <p class="font-medium">{{ __('Customer preview for 0.1 BTC') }}</p>
+                    <p class="mt-1">{{ __(':daily BTC a day · +:profit BTC profit · :total BTC paid back after :days days', ['daily' => Btc::format($preview['daily']), 'profit' => Btc::format($preview['profit']), 'total' => Btc::format($preview['total']), 'days' => $preview['days']]) }}</p>
+                </div>
+            @endif
             <flux:switch wire:model="isActive" :label="__('Open for new investments')" />
             <div class="flex justify-end gap-2">
                 <flux:modal.close><flux:button variant="ghost">{{ __('Cancel') }}</flux:button></flux:modal.close>

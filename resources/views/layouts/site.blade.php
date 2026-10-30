@@ -87,7 +87,7 @@
                 </div>
 
                 <div class="mt-10 space-y-2 border-t border-zinc-200 pt-6 text-xs leading-relaxed text-zinc-500 dark:border-white/10 dark:text-zinc-400">
-                    <p>{{ __('Risk warning: crypto-assets and commodity investments are high risk. Their value can go down as well as up and you may lose all the money you invest. Past performance and target returns are not a reliable indicator of future results. Returns are not guaranteed.') }}</p>
+                    {{-- <p>{{ __('Risk warning: crypto-assets and commodity investments are high risk. Their value can go down as well as up and you may lose all the money you invest. Past performance and target returns are not a reliable indicator of future results. Returns are not guaranteed.') }}</p> --}}
                     @if (filled(\App\Models\Setting::get('company_details')))
                         <p>{{ \App\Models\Setting::get('company_details') }}</p>
                     @endif

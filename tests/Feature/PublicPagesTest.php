@@ -16,7 +16,7 @@ test('the home page lists active plans with risk wording and never waits on the 
         ->assertDontSee('Closed Plan')
         ->assertSee('How much will I earn?', false)
         ->assertSee('data-calculator', false)
-        ->assertSee('Risk warning')
+        ->assertSee('Risk disclaimer')
         ->assertDontSee('Demo')
         ->assertDontSee('simulated');
 });
