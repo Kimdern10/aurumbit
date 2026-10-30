@@ -115,7 +115,7 @@ new #[Title('Deposits')] class extends Component {
                                 —
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell class="whitespace-nowrap">{{ $deposit->created_at->format('j M, H:i') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $deposit->created_at->format('M j, g:i A') }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$deposit->status->color()">{{ $deposit->status->label() }}</flux:badge>
                             @if ($deposit->admin_note) <p class="mt-1 max-w-48 truncate text-xs text-zinc-500">{{ $deposit->admin_note }}</p> @endif

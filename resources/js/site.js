@@ -1,5 +1,5 @@
 /**
- * Small, dependency-free animations for AurumBit.
+ * Small, dependency-free animations for Hashvale.
  * Everything re-runs after Livewire's wire:navigate page swaps.
  */
 
@@ -66,7 +66,7 @@ let priceTimer = null;
 let lastPrices = {};
 
 function renderPrices(data) {
-    ['btc', 'gold'].forEach((asset) => {
+    ['btc', 'gold', 'eth', 'sol'].forEach((asset) => {
         const cents = data[`${asset}_cents`];
         const change = data[`${asset}_change`];
 
@@ -94,7 +94,7 @@ function renderPrices(data) {
     });
 
     document.querySelectorAll('[data-price-updated]').forEach((el) => {
-        if (data.updated_at) el.textContent = new Date(data.updated_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        if (data.updated_at) el.textContent = new Date(data.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     });
 }
 
@@ -250,6 +250,7 @@ function initCalculators() {
         root.dataset.calcReady = '1';
         const plans = JSON.parse(root.dataset.plans || '[]');
         const btcPriceCents = parseInt(root.dataset.btcPrice || '0', 10);
+        const goldPriceCents = parseInt(root.dataset.goldPrice || '0', 10);
         const select = root.querySelector('[data-calc-plan]');
         const input = root.querySelector('[data-calc-amount]');
         const out = (key, text, sub = '') => {
@@ -273,7 +274,7 @@ function initCalculators() {
             const profit = (sats * BigInt(plan.bps)) / 10000n;
             const daily = profit / BigInt(plan.days);
             const total = sats + profit;
-            const ends = new Date(Date.now() + plan.days * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+            const ends = new Date(Date.now() + plan.days * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
             const outside = sats < BigInt(plan.minSats) || (plan.maxSats && sats > BigInt(plan.maxSats));
 
             out('daily', formatBtc(daily), usdFor(daily));
@@ -281,7 +282,10 @@ function initCalculators() {
             out('total', formatBtc(total), usdFor(total));
             root.querySelector('[data-calc-summary]').textContent = outside
                 ? `This amount is outside the ${plan.name} limits.`
-                : `Invest ${formatBtc(sats)} in ${plan.name} today and receive ${formatBtc(total)} on ${ends} (after ${plan.days} days).`;
+                : `Invest ${formatBtc(sats)} in ${plan.name} today and receive ${formatBtc(total)} on ${ends} (after ${plan.days} days).`
+                    + (plan.gold && btcPriceCents && goldPriceCents
+                        ? ` At today's prices that is about ${(Number((total * BigInt(btcPriceCents)) / 100000000n) / goldPriceCents).toFixed(3)} oz of gold.`
+                        : '');
         };
 
         select.addEventListener('change', update);

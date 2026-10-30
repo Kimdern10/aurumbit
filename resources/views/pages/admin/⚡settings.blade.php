@@ -99,7 +99,7 @@ new #[Title('Site settings')] class extends Component {
             </div>
             <flux:input wire:model="tagline" :label="__('Tagline')" />
             <flux:textarea wire:model="seoDescription" :label="__('Description for Google')" rows="2" />
-            <flux:textarea wire:model="companyDetails" :label="__('Company registration and licence details (shown in the footer)')" rows="2" :description="__('For example the RC number and SEC registration number.')" />
+            <flux:textarea wire:model="companyDetails" :label="__('Company registration details (shown in the footer)')" rows="2" :description="__('For example your legal company name, state of incorporation and any SEC, FINRA or FinCEN registration numbers.')" />
         </flux:card>
 
         <flux:card class="space-y-4">

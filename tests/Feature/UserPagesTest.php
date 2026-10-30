@@ -168,7 +168,7 @@ test('a user can send identity documents, which are stored privately', function 
     $user = User::factory()->create();
 
     Livewire::actingAs($user)->test('pages::kyc')
-        ->set('fullName', 'Ada Okafor')
+        ->set('fullName', 'Emma Carter')
         ->set('documentType', 'passport')
         ->set('document', UploadedFile::fake()->image('passport.jpg'))
         ->set('selfie', UploadedFile::fake()->image('selfie.jpg'))

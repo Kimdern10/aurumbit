@@ -1,6 +1,6 @@
 @php($site = \App\Models\Setting::get('site_name'))
 @php($email = \App\Models\Setting::get('support_email'))
-<x-legal-page :title="__('Privacy policy')" :intro="__('What personal information we collect, why, and your rights. We follow the Nigeria Data Protection Act 2023.')">
+<x-legal-page :title="__('Privacy policy')" :intro="__('What personal information we collect, why, and your rights. Written for customers in the United States.')">
     <h2>What we collect</h2>
     <ul>
         <li><strong>Account details:</strong> your name, email address and a scrambled (hashed) password.</li>
@@ -24,7 +24,13 @@
     <p>We keep account and audit records while your account is open and for as long as the law requires afterwards. You can delete your account in Settings; identity documents are deleted with it.</p>
 
     <h2>Your rights</h2>
-    <p>You can ask to see, correct or delete the personal information we hold about you by emailing <a href="mailto:{{ $email }}">{{ $email }}</a>. You can also complain to the Nigeria Data Protection Commission.</p>
+    <p>You can ask to see, correct or delete the personal information we hold about you by emailing <a href="mailto:{{ $email }}">{{ $email }}</a>. We will reply within 45 days. We will not treat you differently for using these rights.</p>
+
+    <h2>California residents</h2>
+    <p>If you live in California, the California Consumer Privacy Act (CCPA) gives you the right to know what personal information we collect and why, to ask us to delete or correct it, and to opt out of its sale or sharing. We do not sell or share personal information for advertising.</p>
+
+    <h2>Children</h2>
+    <p>Our service is only for adults aged 18 or over. We do not knowingly collect information from children under 13.</p>
 
     <h2>Cookies</h2>
     <p>We only use the cookies needed to keep you logged in and protect forms. There are no advertising cookies.</p>

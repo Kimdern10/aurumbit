@@ -8,7 +8,7 @@
             @if ($intro)
                 <p class="mt-3 text-zinc-300">{{ $intro }}</p>
             @endif
-            <p class="mt-4 text-xs text-zinc-400">{{ __('Last updated: :date', ['date' => '30 October 2026']) }}</p>
+            <p class="mt-4 text-xs text-zinc-400">{{ __('Last updated: :date', ['date' => 'October 30, 2026']) }}</p>
         </div>
     </div>
 

@@ -97,7 +97,7 @@ new #[Title('Announcements')] class extends Component {
                         @unless ($announcement->is_published) <flux:badge size="sm">{{ __('Hidden') }}</flux:badge> @endunless
                     </div>
                     <flux:text class="mt-1 text-sm">{{ $announcement->body }}</flux:text>
-                    <flux:text class="mt-1 text-xs">{{ $announcement->created_at->format('j M Y') }}</flux:text>
+                    <flux:text class="mt-1 text-xs">{{ $announcement->created_at->format('M j, Y') }}</flux:text>
                 </div>
                 <div class="flex shrink-0 gap-2">
                     <flux:button size="sm" wire:click="edit({{ $announcement->id }})" icon="pencil-square" :aria-label="__('Edit')" />

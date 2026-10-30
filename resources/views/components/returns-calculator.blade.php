@@ -1,14 +1,18 @@
-@props(['plans', 'btcPriceCents' => null, 'dark' => false])
+@props(['plans', 'btcPriceCents' => null, 'goldPriceCents' => null, 'dark' => false])
 {{--
     Shows what a user would earn: pick a plan, type an amount, see the daily
     earning, the profit at the end of the term, the total payout and the date.
     Worked out in the browser with whole satoshis (BigInt), like the server.
 --}}
 @php
+    $prices = app(\App\Services\MarketPrices::class)->cached();
+    $btcPriceCents ??= $prices['btc_cents'];
+    $goldPriceCents ??= $prices['gold_cents'];
     $data = $plans->map(fn ($plan) => [
         'id' => $plan->id,
         'name' => $plan->name,
         'category' => $plan->category->label(),
+        'gold' => $plan->category === \App\Enums\PlanCategory::Gold,
         'days' => $plan->duration_days,
         'bps' => $plan->target_return_bps,
         'rate' => $plan->targetPercent(),
@@ -22,14 +26,14 @@
 @endphp
 
 @if ($first)
-    <div wire:ignore data-calculator data-plans='@json($data)' data-btc-price="{{ $btcPriceCents }}"
+    <div wire:ignore data-calculator data-plans='@json($data)' data-btc-price="{{ $btcPriceCents }}" data-gold-price="{{ $goldPriceCents }}"
         {{ $attributes->class(['rounded-2xl border p-5 sm:p-6', 'border-white/10 bg-white/5 text-white' => $dark, 'border-zinc-200 bg-white dark:border-white/10 dark:bg-navy-900' => ! $dark]) }}>
         <div class="grid gap-4 sm:grid-cols-2">
             <label class="block">
                 <span @class(['text-sm font-medium', 'text-zinc-300' => $dark, 'text-zinc-700 dark:text-zinc-300' => ! $dark])>{{ __('Plan') }}</span>
                 <select data-calc-plan class="mt-1.5 block w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 dark:border-white/15 dark:bg-navy-950 dark:text-white">
                     @foreach ($data as $plan)
-                        <option value="{{ $plan['id'] }}">{{ $plan['name'] }} · {{ trans_choice(':count day|:count days', $plan['days']) }} · {{ $plan['rate'] }}%</option>
+                        <option value="{{ $plan['id'] }}">{{ $plan['category'] }}: {{ $plan['name'] }} · {{ trans_choice(':count day|:count days', $plan['days']) }} · {{ $plan['rate'] }}%</option>
                     @endforeach
                 </select>
             </label>

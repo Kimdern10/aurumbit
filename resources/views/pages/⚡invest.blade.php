@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\PlanCategory;
 use App\Exceptions\WalletException;
 use App\Models\Plan;
 use App\Services\WalletService;
@@ -9,6 +10,7 @@ use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new #[Title('Plans')] class extends Component {
@@ -20,6 +22,9 @@ new #[Title('Plans')] class extends Component {
 
     public bool $showModal = false;
 
+    #[Url]
+    public string $category = '';
+
     /**
      * @return Collection<int, Plan>
      */
@@ -27,6 +32,38 @@ new #[Title('Plans')] class extends Component {
     public function plans(): Collection
     {
         return Plan::query()->available()->get();
+    }
+
+    /**
+     * One tab per category that has open plans, after "All plans".
+     *
+     * @return array<string, string>
+     */
+    #[Computed]
+    public function tabs(): array
+    {
+        $tabs = ['' => __('All plans')];
+
+        foreach (PlanCategory::cases() as $case) {
+            if ($this->plans->contains('category', $case)) {
+                $tabs[$case->value] = $case->label();
+            }
+        }
+
+        return $tabs;
+    }
+
+    /**
+     * The plans in the chosen tab.
+     *
+     * @return Collection<int, Plan>
+     */
+    #[Computed]
+    public function shownPlans(): Collection
+    {
+        $category = PlanCategory::tryFrom($this->category);
+
+        return $category ? $this->plans->where('category', $category)->values() : $this->plans;
     }
 
     #[Computed]
@@ -85,16 +122,25 @@ new #[Title('Plans')] class extends Component {
     @if ($this->plans->isNotEmpty())
         <div>
             <flux:heading>{{ __('How much will I earn?') }}</flux:heading>
-            <x-returns-calculator class="mt-3" :plans="$this->plans" :btc-price-cents="app(\App\Services\MarketPrices::class)->cached()['btc_cents']" />
+            <x-returns-calculator class="mt-3" :plans="$this->plans" />
         </div>
     @endif
 
+    <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        @foreach ($this->tabs as $value => $label)
+            <button type="button" wire:click="$set('category', '{{ $value }}')" wire:key="tab-{{ $value ?: 'all' }}"
+                @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $category === $value, 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $category !== $value])>
+                {{ $label }}
+            </button>
+        @endforeach
+    </div>
+
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        @forelse ($this->plans as $plan)
+        @forelse ($this->shownPlans as $plan)
             <flux:card wire:key="plan-{{ $plan->id }}" class="flex flex-col">
                 <div class="flex items-start justify-between gap-3">
                     <div>
-                        <flux:badge size="sm" :color="$plan->category->value === 'gold' ? 'yellow' : 'orange'">{{ $plan->category->label() }}</flux:badge>
+                        <flux:badge size="sm" :color="$plan->category->badgeColor()">{{ $plan->category->label() }}</flux:badge>
                         <flux:heading size="lg" class="mt-2">{{ $plan->name }}</flux:heading>
                     </div>
                     <flux:badge size="sm" :color="$plan->risk_level === 'medium' ? 'amber' : 'red'">{{ __(':level risk', ['level' => $plan->riskLabel()]) }}</flux:badge>
@@ -136,8 +182,11 @@ new #[Title('Plans')] class extends Component {
                         <div class="flex justify-between"><dt>{{ __('Rate') }}</dt><dd>{{ $plan->targetPercent() }}% {{ __('for :days days', ['days' => $plan->duration_days]) }}</dd></div>
                         <div class="flex justify-between"><dt>{{ __('Earned per day') }}</dt><dd><x-btc :sats="intdiv($profit, $plan->duration_days)" /></dd></div>
                         <div class="flex justify-between"><dt>{{ __('Profit at the end') }}</dt><dd><x-btc :sats="$profit" signed class="text-green-600 dark:text-green-400" /></dd></div>
-                        <div class="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold text-zinc-900 dark:border-white/10 dark:text-white"><dt>{{ __('You receive on :date', ['date' => now()->addDays($plan->duration_days)->format('j M Y')]) }}</dt><dd><x-btc :sats="$sats + $profit" /></dd></div>
+                        <div class="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold text-zinc-900 dark:border-white/10 dark:text-white"><dt>{{ __('You receive on :date', ['date' => now()->addDays($plan->duration_days)->format('M j, Y')]) }}</dt><dd><x-btc :sats="$sats + $profit" /></dd></div>
                     </dl>
+                    @if ($plan->category === PlanCategory::Gold && ($goldMg = app(\App\Services\MarketPrices::class)->goldMilligrams($sats)))
+                        <flux:text class="text-sm">{{ __('Your :amount BTC is worth about :ounces oz (:grams g) of gold at today\'s price.', ['amount' => Btc::format($sats), 'ounces' => number_format($goldMg / 31103.4768, 3), 'grams' => number_format($goldMg / 1000, 2)]) }}</flux:text>
+                    @endif
                 @endif
 
                 <flux:field variant="inline">

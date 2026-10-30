@@ -2,14 +2,13 @@
     use App\Enums\PlanCategory;
     use App\Support\Btc;
 
-    $btcPlans = $plans->where('category', PlanCategory::Bitcoin);
-    $goldPlans = $plans->where('category', PlanCategory::Gold);
 
     $faqs = [
         ['q' => 'How do I deposit?', 'a' => 'Send Bitcoin to our deposit address shown in your dashboard, then enter the amount and the transaction ID. Your balance is credited once the transaction is confirmed on the blockchain and checked by our team.'],
         ['q' => 'How much will I earn?', 'a' => 'Each plan has a rate for its full term. Your earnings build up every day and are paid with your capital at the end of the term. Use the calculator above to see the exact figures for any plan and amount.'],
         ['q' => 'How do withdrawals work?', 'a' => 'You request a withdrawal to your own Bitcoin address. We check the address and its checksum, hold the amount from your balance, and our team sends the BTC after review. You can follow the payment on the blockchain.'],
         ['q' => 'Why do you ask for identity documents?', 'a' => 'Know-your-customer (KYC) checks help prevent fraud and money laundering. Your documents are stored privately and only reviewed by an admin.'],
+        ['q' => 'What can I invest in?', 'a' => 'Bitcoin mining, gold mining, Ethereum staking, Solana staking and a top-10 crypto index. Every plan is funded from your BTC balance, and you can see the rate, term and exact earnings before you invest.'],
         ['q' => 'How are gold plans priced?', 'a' => 'Gold plans are funded in BTC. When you start a plan, we show the gold equivalent at that moment using the live PAX Gold price (one token is backed by one troy ounce of gold).'],
         ['q' => 'Can I lose money?', 'a' => 'With real crypto and commodity investments, yes, you can lose some or all of your money. Please read the risk disclosure before investing anywhere.'],
     ];
@@ -26,16 +25,16 @@
             <div>
                 <p data-reveal class="inline-flex items-center gap-2 rounded-full border border-gold-300/30 bg-white/5 px-3 py-1 text-xs font-medium text-gold-200">
                     <span class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-gold-300 opacity-75"></span><span class="relative inline-flex size-2 rounded-full bg-gold-400"></span></span>
-                    {{ __('Bitcoin & gold mining plans') }}
+                    {{ __('Bitcoin · Gold · Ethereum · Solana') }}
                 </p>
 
                 <h1 data-reveal style="--reveal-delay: 80ms" class="mt-6 font-display text-4xl leading-[1.05] font-bold sm:text-5xl lg:text-6xl">
-                    {{ __('Mining-backed plans,') }}
-                    <span class="text-gold-gradient animate-shine">{{ __('every term in plain sight.') }}</span>
+                    {{ __('Grow your Bitcoin with') }}
+                    <span class="text-gold-gradient animate-shine">{{ __('mining, gold & staking plans.') }}</span>
                 </h1>
 
                 <p data-reveal style="--reveal-delay: 160ms" class="mt-6 max-w-xl text-lg text-zinc-300">
-                    {{ __('Explore Bitcoin and gold mining plans with clear terms, live market prices, admin-reviewed withdrawals and a full audit trail of every balance change.') }}
+                    {{ __('Choose from Bitcoin mining, gold mining, Ethereum and Solana staking and a crypto index. See your daily earnings and payout date before you invest, and withdraw to your own wallet.') }}
                 </p>
 
                 <div data-reveal style="--reveal-delay: 240ms" class="mt-8 flex flex-wrap gap-3">
@@ -51,12 +50,17 @@
 
             {{-- Live prices and a preview card --}}
             <div class="relative">
-                <div class="grid gap-4 sm:grid-cols-2">
-                    @foreach (['btc' => ['Bitcoin', 'BTC / USD'], 'gold' => ['Gold', 'PAXG (1 oz) / USD']] as $asset => [$label, $pair])
-                        <div data-reveal style="--reveal-delay: {{ $loop->index * 120 + 200 }}ms" class="rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+                <div class="grid grid-cols-2 gap-3 sm:gap-4">
+                    @foreach ([
+                        'btc' => ['Bitcoin', 'BTC', '₿', '#f7931a'],
+                        'gold' => ['Gold', 'PAXG · 1 oz', 'Au', '#e0b434'],
+                        'eth' => ['Ethereum', 'ETH', 'Ξ', '#8ea2f2'],
+                        'sol' => ['Solana', 'SOL', 'S', '#2dd4bf'],
+                    ] as $asset => [$label, $pair, $symbol, $color])
+                        <div data-reveal style="--reveal-delay: {{ $loop->index * 100 + 200 }}ms" class="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur sm:p-5">
                             <div class="flex items-center justify-between">
                                 <div class="flex items-center gap-2">
-                                    <span class="flex size-9 items-center justify-center rounded-full {{ $asset === 'btc' ? 'bg-[#f7931a]/20 text-[#f7931a]' : 'bg-gold-400/20 text-gold-300' }} font-display text-sm font-bold">{{ $asset === 'btc' ? '₿' : 'Au' }}</span>
+                                    <span class="flex size-9 shrink-0 items-center justify-center rounded-full font-display text-sm font-bold" style="background: {{ $color }}33; color: {{ $color }}">{{ $symbol }}</span>
                                     <div>
                                         <p class="text-sm font-semibold">{{ $label }}</p>
                                         <p class="text-xs text-zinc-400">{{ $pair }}</p>
@@ -68,15 +72,15 @@
                                     @endif
                                 </span>
                             </div>
-                            <p data-price="{{ $asset }}" class="mt-4 rounded font-display text-2xl font-semibold tabular-nums">
+                            <p data-price="{{ $asset }}" class="mt-3 rounded font-display text-lg font-semibold tabular-nums sm:text-2xl">
                                 {{ $prices[$asset.'_cents'] !== null ? Btc::usd($prices[$asset.'_cents']) : '—' }}
                             </p>
                         </div>
                     @endforeach
                 </div>
-                <p class="mt-2 text-right text-[11px] text-zinc-500">{{ __('Live prices from CoinGecko, updated') }} <span data-price-updated>{{ $prices['updated_at'] ? \Illuminate\Support\Carbon::parse($prices['updated_at'])->format('H:i') : '…' }}</span></p>
+                <p class="mt-2 text-right text-[11px] text-zinc-500">{{ __('Live prices from CoinGecko, updated') }} <span data-price-updated>{{ $prices['updated_at'] ? \Illuminate\Support\Carbon::parse($prices['updated_at'])->format('g:i A') : '…' }}</span></p>
 
-                <div data-reveal style="--reveal-delay: 450ms" class="mt-6 animate-float rounded-2xl border border-gold-300/20 bg-linear-to-br from-navy-800 to-navy-900 p-6 shadow-2xl shadow-black/40">
+                <div data-reveal style="--reveal-delay: 450ms" class="mt-6 hidden animate-float rounded-2xl sm:block border border-gold-300/20 bg-linear-to-br from-navy-800 to-navy-900 p-6 shadow-2xl shadow-black/40">
                     <div class="flex items-center justify-between text-sm">
                         <span class="text-zinc-400">{{ __('Your wallet') }}</span>
                         <span class="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-medium text-gold-200">{{ __('Example') }}</span>
@@ -142,7 +146,7 @@
                 @foreach ([
                     ['icon' => 'user-plus', 'title' => 'Create & verify', 'text' => 'Sign up, confirm your email, turn on two-step login and send your ID for review.'],
                     ['icon' => 'qr-code', 'title' => 'Fund your wallet', 'text' => 'Send BTC to our address and enter the transaction ID. We credit it once confirmed.'],
-                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Compare Bitcoin and gold mining plans by rate, term and minimum, and see your earnings before you invest.'],
+                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Compare mining, gold and staking plans by rate, term and minimum, and see your earnings before you invest.'],
                     ['icon' => 'arrow-up-tray', 'title' => 'Withdraw to your wallet', 'text' => 'Request a withdrawal to your own BTC address. We check it and send your BTC.'],
                 ] as $step)
                     <li data-reveal style="--reveal-delay: {{ $loop->index * 100 }}ms" class="group relative rounded-2xl border border-zinc-200 bg-white p-6 transition hover:-translate-y-1 hover:border-gold-300 hover:shadow-xl hover:shadow-gold-500/10 dark:border-white/10 dark:bg-navy-900 dark:hover:border-gold-400/40">
@@ -163,7 +167,7 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div data-reveal class="mx-auto max-w-2xl text-center">
                 <p class="text-sm font-semibold tracking-wide text-gold-600 uppercase dark:text-gold-300">{{ __('Plans') }}</p>
-                <h2 class="mt-2 font-display text-3xl font-bold text-navy-900 sm:text-4xl dark:text-white">{{ __('Bitcoin and gold mining plans') }}</h2>
+                <h2 class="mt-2 font-display text-3xl font-bold text-navy-900 sm:text-4xl dark:text-white">{{ __('Mining, gold and staking plans') }}</h2>
                 <p class="mt-4">{{ __('Pick a plan and an amount to see what you earn per day, your profit and the date you are paid.') }}</p>
             </div>
 
@@ -173,12 +177,16 @@
                 </div>
             @endif
 
-            @foreach ([['Bitcoin mining', $btcPlans, '₿'], ['Gold mining', $goldPlans, 'Au']] as [$heading, $group, $symbol])
+            @foreach (PlanCategory::cases() as $category)
+                @php($group = $plans->where('category', $category))
                 @if ($group->isNotEmpty())
-                    <h3 data-reveal class="mt-14 flex items-center gap-3 font-display text-xl font-semibold text-navy-900 dark:text-white">
-                        <span class="flex size-8 items-center justify-center rounded-full bg-gold-100 text-sm font-bold text-gold-700 dark:bg-gold-400/15 dark:text-gold-300">{{ $symbol }}</span>
-                        {{ __($heading) }}
-                    </h3>
+                    <div data-reveal class="mt-14 flex flex-wrap items-end justify-between gap-2">
+                        <h3 class="flex items-center gap-3 font-display text-xl font-semibold text-navy-900 dark:text-white">
+                            <span class="flex size-9 items-center justify-center rounded-full font-display text-sm font-bold" style="background: {{ $category->color() }}26; color: {{ $category->color() }}">{{ $category->symbol() }}</span>
+                            {{ __($category->label()) }}
+                        </h3>
+                        <p class="text-sm">{{ __($category->description()) }}</p>
+                    </div>
                     <div class="mt-6 grid gap-6 md:grid-cols-2 lg:grid-cols-3">
                         @foreach ($group as $plan)
                             <article data-reveal style="--reveal-delay: {{ $loop->index * 90 }}ms" class="flex flex-col rounded-2xl border border-zinc-200 bg-white p-6 transition hover:-translate-y-1 hover:shadow-xl dark:border-white/10 dark:bg-navy-900">

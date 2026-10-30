@@ -53,7 +53,7 @@ new #[Title('Referrals')] class extends Component {
             @forelse ($this->referrals as $referral)
                 <li wire:key="ref-{{ $referral->id }}" class="flex justify-between py-2.5 text-sm">
                     <span>{{ Str::mask($referral->name, '*', 3) }}</span>
-                    <span class="text-zinc-500">{{ __('Joined :date', ['date' => $referral->created_at->format('j M Y')]) }}</span>
+                    <span class="text-zinc-500">{{ __('Joined :date', ['date' => $referral->created_at->format('M j, Y')]) }}</span>
                 </li>
             @empty
                 <li class="py-2.5 text-sm text-zinc-500">{{ __('Nobody yet. Share your link to get started.') }}</li>

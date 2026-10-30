@@ -26,10 +26,10 @@ class Setting extends Model
      * @var array<string, string>
      */
     public const array DEFAULTS = [
-        'site_name' => 'AurumBit',
-        'tagline' => 'Bitcoin and gold mining plans, explained clearly.',
-        'support_email' => 'support@aurumbit.test',
-        'seo_description' => 'AurumBit offers Bitcoin and gold mining investment plans with clear rates, terms, risk disclosures and a full audit trail of every balance change.',
+        'site_name' => 'Hashvale',
+        'tagline' => 'Mining-backed crypto and gold investing, made simple.',
+        'support_email' => 'support@hashvale.test',
+        'seo_description' => 'Hashvale offers Bitcoin mining, gold mining, Ethereum and Solana staking and crypto index plans with clear rates, a returns calculator and a full audit trail.',
         'deposit_address' => '',
         'explorer_tx_url' => 'https://mempool.space/tx/',
         'min_deposit_sats' => '100000',

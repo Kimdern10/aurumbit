@@ -57,7 +57,7 @@ new #[Title('User')] class extends Component {
         <div>
             <flux:link :href="route('admin.users')" wire:navigate class="text-sm">← {{ __('All users') }}</flux:link>
             <flux:heading size="xl" class="mt-2">{{ $user->name }}</flux:heading>
-            <flux:text>{{ $user->email }} · {{ __('Joined :date', ['date' => $user->created_at->format('j M Y')]) }} · {{ __('Code') }} <span class="font-mono">{{ $user->referral_code }}</span></flux:text>
+            <flux:text>{{ $user->email }} · {{ __('Joined :date', ['date' => $user->created_at->format('M j, Y')]) }} · {{ __('Code') }} <span class="font-mono">{{ $user->referral_code }}</span></flux:text>
             <div class="mt-2 flex flex-wrap gap-1.5">
                 <flux:badge size="sm" :color="$user->hasVerifiedEmail() ? 'green' : 'zinc'">{{ $user->hasVerifiedEmail() ? __('Email verified') : __('Email not verified') }}</flux:badge>
                 <flux:badge size="sm" :color="$user->two_factor_confirmed_at ? 'green' : 'zinc'">{{ $user->two_factor_confirmed_at ? __('Two-step on') : __('Two-step off') }}</flux:badge>
@@ -101,7 +101,7 @@ new #[Title('User')] class extends Component {
                 <flux:table.rows>
                     @forelse ($user->ledgerEntries()->with('actor:id,name')->latest('id')->limit(15)->get() as $entry)
                         <flux:table.row :key="$entry->id">
-                            <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('j M, H:i') }}</flux:table.cell>
+                            <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('M j, g:i A') }}</flux:table.cell>
                             <flux:table.cell>
                                 <p>{{ $entry->description }}</p>
                                 @if ($entry->actor) <p class="text-xs text-zinc-500">{{ __('by :name', ['name' => $entry->actor->name]) }}</p> @endif

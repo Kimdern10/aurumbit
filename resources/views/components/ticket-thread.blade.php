@@ -11,7 +11,7 @@
             ])>
                 <p class="mb-1 text-xs font-semibold opacity-70">
                     {{ $message->from_staff ? __(':site support', ['site' => \App\Models\Setting::get('site_name')]) : $ticket->user->name }}
-                    · {{ $message->created_at?->format('j M, H:i') }}
+                    · {{ $message->created_at?->format('M j, g:i A') }}
                 </p>
                 <p class="whitespace-pre-line">{{ $message->body }}</p>
             </div>

@@ -9,12 +9,16 @@ use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 new #[Title('Plans')] class extends Component {
     public ?int $editingId = null;
 
     public bool $showForm = false;
+
+    #[Url]
+    public string $filter = '';
 
     public string $name = '';
 
@@ -42,15 +46,45 @@ new #[Title('Plans')] class extends Component {
     #[Computed]
     public function plans(): Collection
     {
-        return Plan::query()->withCount(['investments as active_count' => fn ($query) => $query->where('status', 'active')])
+        return Plan::query()
+            ->withCount(['investments', 'investments as active_count' => fn ($query) => $query->where('status', 'active')])
+            ->when(PlanCategory::tryFrom($this->filter), fn ($query, PlanCategory $category) => $query->where('category', $category))
             ->orderBy('sort_order')->orderBy('id')->get();
+    }
+
+    /**
+     * How many plans each category has, for the tabs.
+     *
+     * @return array<string, int>
+     */
+    #[Computed]
+    public function counts(): array
+    {
+        return Plan::query()->toBase()->selectRaw('category, count(*) as total')->groupBy('category')->pluck('total', 'category')->map(fn ($total): int => (int) $total)->all();
     }
 
     public function create(): void
     {
         $this->resetValidation();
         $this->reset('editingId', 'name', 'category', 'summary', 'minBtc', 'maxBtc', 'durationDays', 'targetPercent', 'riskLevel', 'isActive', 'sortOrder');
+        $this->category = PlanCategory::tryFrom($this->filter)->value ?? 'bitcoin';
         $this->showForm = true;
+    }
+
+    /**
+     * Remove a plan nobody has invested in. Plans with history can only be closed.
+     */
+    public function delete(Plan $plan): void
+    {
+        if ($plan->investments()->exists()) {
+            Flux::toast(variant: 'danger', text: __('This plan has investments, so it can only be closed, not deleted.'));
+
+            return;
+        }
+
+        $plan->delete();
+        unset($this->plans, $this->counts);
+        Flux::toast(text: __('Plan deleted.'));
     }
 
     public function edit(Plan $plan): void
@@ -153,7 +187,14 @@ new #[Title('Plans')] class extends Component {
             <flux:heading size="xl">{{ __('Plans') }}</flux:heading>
             <flux:text class="mt-1">{{ __('Changes apply to new investments only. Running investments keep the rate they started with.') }}</flux:text>
         </div>
-        <flux:button wire:click="create" variant="primary" icon="plus">{{ __('New plan') }}</flux:button>
+        <flux:button wire:click="create" variant="primary" icon="plus">{{ PlanCategory::tryFrom($filter) ? __('New :category plan', ['category' => PlanCategory::from($filter)->label()]) : __('New plan') }}</flux:button>
+    </div>
+
+    <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
+        <button type="button" wire:click="$set('filter', '')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $filter === '', 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $filter !== ''])>{{ __('All') }} ({{ array_sum($this->counts) }})</button>
+        @foreach (PlanCategory::cases() as $case)
+            <button type="button" wire:key="filter-{{ $case->value }}" wire:click="$set('filter', '{{ $case->value }}')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $filter === $case->value, 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $filter !== $case->value])>{{ $case->label() }} ({{ $this->counts[$case->value] ?? 0 }})</button>
+        @endforeach
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
@@ -161,7 +202,7 @@ new #[Title('Plans')] class extends Component {
             <flux:table.columns>
                 <flux:table.column>{{ __('Plan') }}</flux:table.column>
                 <flux:table.column>{{ __('Limits') }}</flux:table.column>
-                <flux:table.column>{{ __('Term / target') }}</flux:table.column>
+                <flux:table.column>{{ __('Term / rate') }}</flux:table.column>
                 <flux:table.column>{{ __('Active investments') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column></flux:table.column>
@@ -171,7 +212,7 @@ new #[Title('Plans')] class extends Component {
                     <flux:table.row :key="$plan->id">
                         <flux:table.cell>
                             <p class="font-medium text-zinc-900 dark:text-white">{{ $plan->name }}</p>
-                            <p class="text-xs text-zinc-500">{{ $plan->category->label() }} · {{ __(':level risk', ['level' => $plan->riskLabel()]) }}</p>
+                            <p class="text-xs text-zinc-500"><flux:badge size="sm" :color="$plan->category->badgeColor()" class="me-1">{{ $plan->category->label() }}</flux:badge> {{ __(':level risk', ['level' => $plan->riskLabel()]) }}</p>
                         </flux:table.cell>
                         <flux:table.cell class="text-xs"><x-btc :sats="$plan->min_sats" /> – @if ($plan->max_sats)<x-btc :sats="$plan->max_sats" />@else ∞ @endif</flux:table.cell>
                         <flux:table.cell>{{ trans_choice(':count day|:count days', $plan->duration_days) }} · {{ $plan->targetPercent() }}%</flux:table.cell>
@@ -179,7 +220,14 @@ new #[Title('Plans')] class extends Component {
                         <flux:table.cell>
                             <flux:switch :checked="$plan->is_active" wire:click="toggle({{ $plan->id }})" :label="$plan->is_active ? __('Open') : __('Closed')" />
                         </flux:table.cell>
-                        <flux:table.cell align="end"><flux:button size="sm" wire:click="edit({{ $plan->id }})" icon="pencil-square">{{ __('Edit') }}</flux:button></flux:table.cell>
+                        <flux:table.cell align="end">
+                            <div class="flex justify-end gap-2">
+                                <flux:button size="sm" wire:click="edit({{ $plan->id }})" icon="pencil-square">{{ __('Edit') }}</flux:button>
+                                @if ($plan->investments_count === 0)
+                                    <flux:button size="sm" variant="danger" wire:click="delete({{ $plan->id }})" wire:confirm="{{ __('Delete this plan?') }}" icon="trash" :aria-label="__('Delete')" />
+                                @endif
+                            </div>
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row><flux:table.cell colspan="6" class="text-center">{{ __('No plans yet.') }}</flux:table.cell></flux:table.row>

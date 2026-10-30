@@ -48,7 +48,7 @@ new #[Title('Admin overview')] class extends Component {
             $day = $since->addDays($offset);
             $value = $sums[$day->format('Y-m-d')] ?? 0;
 
-            return ['label' => $day->format('j M'), 'value' => $value, 'text' => Btc::format($value).' BTC'];
+            return ['label' => $day->format('M j'), 'value' => $value, 'text' => Btc::format($value).' BTC'];
         })->all();
     }
 

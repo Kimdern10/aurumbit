@@ -108,7 +108,7 @@ new #[Title('Verifications')] class extends Component {
                     <flux:table.row :key="$submission->id">
                         <flux:table.cell>
                             <a href="{{ route('admin.users.show', $submission->user_id) }}" wire:navigate class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $submission->user->name }}</a>
-                            <p class="text-xs text-zinc-500">{{ $submission->created_at->format('j M Y, H:i') }}</p>
+                            <p class="text-xs text-zinc-500">{{ $submission->created_at->format('M j, Y g:i A') }}</p>
                         </flux:table.cell>
                         <flux:table.cell>
                             <p>{{ $submission->full_name }}</p>

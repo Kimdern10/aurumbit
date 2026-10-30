@@ -64,7 +64,7 @@ new #[Title('Transactions')] class extends Component {
             <flux:table.rows>
                 @forelse ($this->entries as $entry)
                     <flux:table.row :key="$entry->id">
-                        <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('j M Y, H:i') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('M j, Y g:i A') }}</flux:table.cell>
                         <flux:table.cell><flux:badge size="sm" :color="$entry->amount_sats >= 0 ? 'green' : 'zinc'">{{ $entry->type->label() }}</flux:badge></flux:table.cell>
                         <flux:table.cell class="max-w-72 truncate">{{ $entry->description }}</flux:table.cell>
                         <flux:table.cell align="end"><x-btc :sats="$entry->amount_sats" signed @class(['font-medium', 'text-green-600 dark:text-green-400' => $entry->amount_sats > 0]) /></flux:table.cell>

@@ -39,10 +39,10 @@ class KycSubmission extends Model
     protected $attributes = ['status' => 'pending'];
 
     public const array DOCUMENT_TYPES = [
-        'passport' => 'International passport',
-        'national_id' => 'National ID card (NIN slip)',
-        'drivers_licence' => "Driver's licence",
-        'voters_card' => "Voter's card",
+        'drivers_license' => "Driver's license",
+        'state_id' => 'State ID card',
+        'passport' => 'Passport',
+        'passport_card' => 'U.S. passport card',
     ];
 
     /**

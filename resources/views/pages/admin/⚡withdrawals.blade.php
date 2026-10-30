@@ -125,7 +125,7 @@ new #[Title('Withdrawals')] class extends Component {
                                 <a href="{{ \App\Models\Setting::get('explorer_tx_url').$withdrawal->payout_txid }}" target="_blank" rel="noopener" class="text-xs underline">{{ __('View payment') }}</a>
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell class="whitespace-nowrap">{{ $withdrawal->created_at->format('j M, H:i') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $withdrawal->created_at->format('M j, g:i A') }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$withdrawal->status->color()">{{ $withdrawal->status->label() }}</flux:badge>
                             @if ($withdrawal->admin_note) <p class="mt-1 max-w-48 truncate text-xs text-zinc-500">{{ $withdrawal->admin_note }}</p> @endif

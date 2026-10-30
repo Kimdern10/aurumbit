@@ -135,7 +135,7 @@ new #[Title('Deposit')] class extends Component {
             <flux:table.rows>
                 @forelse ($this->deposits as $deposit)
                     <flux:table.row :key="$deposit->id">
-                        <flux:table.cell class="whitespace-nowrap">{{ $deposit->created_at->format('j M Y, H:i') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $deposit->created_at->format('M j, Y g:i A') }}</flux:table.cell>
                         <flux:table.cell><x-btc :sats="$deposit->amount_sats" /></flux:table.cell>
                         <flux:table.cell class="font-mono text-xs">
                             @if ($deposit->reference)

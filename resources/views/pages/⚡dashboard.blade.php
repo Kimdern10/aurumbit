@@ -62,7 +62,7 @@ new #[Title('Dashboard')] class extends Component {
     {
         return Auth::user()->ledgerEntries()->latest('id')->limit(30)->get()->reverse()->values()
             ->map(fn (LedgerEntry $entry): array => [
-                'label' => $entry->created_at->format('j M'),
+                'label' => $entry->created_at->format('M j'),
                 'value' => $entry->balance_after_sats,
                 'text' => Btc::format($entry->balance_after_sats).' BTC',
             ])->all();
@@ -191,14 +191,15 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card>
             <flux:heading>{{ __('Allocation') }}</flux:heading>
             @php
-                $btcInPlans = (int) $this->activeInvestments->filter(fn ($i) => $i->plan->category === PlanCategory::Bitcoin)->sum('amount_sats');
-                $goldInPlans = $this->totals['invested'] - $btcInPlans;
+                $segments = [['label' => __('Available'), 'value' => $this->totals['balance'], 'color' => '#4f6cb8', 'text' => Btc::format($this->totals['balance']).' BTC']];
+                foreach (PlanCategory::cases() as $category) {
+                    $inPlans = (int) $this->activeInvestments->filter(fn ($investment) => $investment->plan->category === $category)->sum('amount_sats');
+                    if ($inPlans > 0 || in_array($category, [PlanCategory::Bitcoin, PlanCategory::Gold], true)) {
+                        $segments[] = ['label' => __($category->label()), 'value' => $inPlans, 'color' => $category->color(), 'text' => Btc::format($inPlans).' BTC'];
+                    }
+                }
             @endphp
-            <x-chart.donut class="mt-6" :segments="[
-                ['label' => __('Available'), 'value' => $this->totals['balance'], 'color' => '#4f6cb8', 'text' => Btc::format($this->totals['balance']).' BTC'],
-                ['label' => __('Bitcoin mining'), 'value' => $btcInPlans, 'color' => '#f7931a', 'text' => Btc::format($btcInPlans).' BTC'],
-                ['label' => __('Gold mining'), 'value' => $goldInPlans, 'color' => '#c9a227', 'text' => Btc::format($goldInPlans).' BTC'],
-            ]">
+            <x-chart.donut class="mt-6" :segments="$segments">
                 <x-slot name="center">
                     <span class="text-[11px] text-zinc-500">{{ __('Total') }}</span>
                     <span class="text-sm font-semibold text-zinc-900 dark:text-white">{{ Btc::format($this->totals['balance'] + $this->totals['invested']) }}</span>
@@ -232,7 +233,7 @@ new #[Title('Dashboard')] class extends Component {
                         </div>
                         <flux:progress class="mt-2" :value="$investment->progressPercent()" />
                         <div class="mt-1.5 flex justify-between text-xs text-zinc-500">
-                            <span>{{ __('Ends :date', ['date' => $investment->ends_at->format('j M Y')]) }}</span>
+                            <span>{{ __('Ends :date', ['date' => $investment->ends_at->format('M j, Y')]) }}</span>
                             <span>{{ __('Earned so far:') }} <x-btc :sats="$investment->earned_sats" /></span>
                         </div>
                     </div>
@@ -252,7 +253,7 @@ new #[Title('Dashboard')] class extends Component {
                     <li wire:key="entry-{{ $entry->id }}" class="flex items-center justify-between gap-3 py-2.5 text-sm">
                         <div class="min-w-0">
                             <p class="truncate font-medium text-zinc-900 dark:text-white">{{ $entry->type->label() }}</p>
-                            <p class="truncate text-xs text-zinc-500">{{ $entry->created_at->format('j M Y, H:i') }}</p>
+                            <p class="truncate text-xs text-zinc-500">{{ $entry->created_at->format('M j, Y g:i A') }}</p>
                         </div>
                         <x-btc :sats="$entry->amount_sats" signed @class(['font-medium', 'text-green-600 dark:text-green-400' => $entry->amount_sats > 0, 'text-zinc-700 dark:text-zinc-300' => $entry->amount_sats < 0]) />
                     </li>

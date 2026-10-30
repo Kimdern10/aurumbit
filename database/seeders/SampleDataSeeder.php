@@ -15,57 +15,57 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * Sample admin and users with a believable history, for local testing only.
- * Logins: admin@aurumbit.test and ada@example.com etc., password "password".
+ * Logins: admin@hashvale.test and emma@example.com etc., password "password".
  */
 class SampleDataSeeder extends Seeder
 {
     public function run(WalletService $wallet): void
     {
-        if (User::query()->where('email', 'admin@aurumbit.test')->exists()) {
+        if (User::query()->where('email', 'admin@hashvale.test')->exists()) {
             return;
         }
 
-        $admin = User::factory()->admin()->create(['name' => 'AurumBit Admin', 'email' => 'admin@aurumbit.test']);
+        $admin = User::factory()->admin()->create(['name' => 'Hashvale Admin', 'email' => 'admin@hashvale.test']);
 
         // A sample address for local testing only. The real company address is set in Site settings.
-        Setting::put(['deposit_address' => 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', 'company_details' => 'AurumBit Ltd. RC 0000000. SEC registration number: to be added.']);
+        Setting::put(['deposit_address' => 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', 'company_details' => 'Hashvale Inc., a Delaware corporation. Registration details to be added.']);
 
         $plans = Plan::query()->get()->keyBy('slug');
 
-        $ada = User::factory()->create(['name' => 'Ada Okafor', 'email' => 'ada@example.com']);
-        $tunde = User::factory()->create(['name' => 'Tunde Bello', 'email' => 'tunde@example.com', 'referred_by_id' => $ada->id]);
-        $chioma = User::factory()->create(['name' => 'Chioma Eze', 'email' => 'chioma@example.com', 'referred_by_id' => $ada->id]);
-        User::factory()->create(['name' => 'Emeka Nwosu', 'email' => 'emeka@example.com']);
+        $emma = User::factory()->create(['name' => 'Emma Carter', 'email' => 'emma@example.com']);
+        $james = User::factory()->create(['name' => 'James Miller', 'email' => 'james@example.com', 'referred_by_id' => $emma->id]);
+        $olivia = User::factory()->create(['name' => 'Olivia Brooks', 'email' => 'olivia@example.com', 'referred_by_id' => $emma->id]);
+        User::factory()->create(['name' => 'Noah Bennett', 'email' => 'noah@example.com']);
 
-        $this->kyc($ada, approved: true, reviewer: $admin);
-        $this->kyc($tunde, approved: true, reviewer: $admin);
-        $this->kyc($chioma, approved: false);
+        $this->kyc($emma, approved: true, reviewer: $admin);
+        $this->kyc($james, approved: true, reviewer: $admin);
+        $this->kyc($olivia, approved: false);
 
-        // Ada: deposits, two plans (one finished), a paid withdrawal and a pending one.
-        $this->at(40, fn () => $wallet->approveDeposit($wallet->requestDeposit($ada, 25_000_000, str_repeat('a1', 32)), $admin));
-        $this->at(38, fn () => $wallet->invest($ada, $plans['hashrate-starter'], 5_000_000));
-        $this->at(30, fn () => $wallet->invest($ada, $plans['hard-rock-gold'], 8_000_000));
-        $this->at(23, fn () => $wallet->settle($ada->investments()->where('plan_id', $plans['hashrate-starter']->id)->firstOrFail()));
-        $this->at(20, fn () => $wallet->approveWithdrawal($wallet->requestWithdrawal($ada, 2_000_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'), $admin, str_repeat('e5', 32)));
-        $this->at(12, fn () => $wallet->approveDeposit($wallet->requestDeposit($ada, 10_000_000, str_repeat('b2', 32)), $admin));
-        $this->at(6, fn () => $wallet->invest($ada, $plans['hashrate-core'], 6_000_000));
-        $this->at(1, fn () => $wallet->requestWithdrawal($ada, 1_500_000, '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'));
+        // Emma: deposits, two plans (one finished), a paid withdrawal and a pending one.
+        $this->at(40, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 25_000_000, str_repeat('a1', 32)), $admin));
+        $this->at(38, fn () => $wallet->invest($emma, $plans['hashrate-starter'], 5_000_000));
+        $this->at(30, fn () => $wallet->invest($emma, $plans['hard-rock-gold'], 8_000_000));
+        $this->at(23, fn () => $wallet->settle($emma->investments()->where('plan_id', $plans['hashrate-starter']->id)->firstOrFail()));
+        $this->at(20, fn () => $wallet->approveWithdrawal($wallet->requestWithdrawal($emma, 2_000_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'), $admin, str_repeat('e5', 32)));
+        $this->at(12, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 10_000_000, str_repeat('b2', 32)), $admin));
+        $this->at(6, fn () => $wallet->invest($emma, $plans['hashrate-core'], 6_000_000));
+        $this->at(1, fn () => $wallet->requestWithdrawal($emma, 1_500_000, '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'));
 
-        // Tunde (invited by Ada): first deposit pays Ada a referral bonus.
-        $this->at(15, fn () => $wallet->approveDeposit($wallet->requestDeposit($tunde, 12_000_000, str_repeat('d4', 32)), $admin));
-        $this->at(14, fn () => $wallet->invest($tunde, $plans['alluvial-gold'], 4_000_000));
-        $this->at(3, fn () => $wallet->rejectWithdrawal($wallet->requestWithdrawal($tunde, 1_000_000, 'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297'), $admin, 'Please confirm this address belongs to you.'));
+        // James (invited by Emma): first deposit pays Emma a referral bonus.
+        $this->at(15, fn () => $wallet->approveDeposit($wallet->requestDeposit($james, 12_000_000, str_repeat('d4', 32)), $admin));
+        $this->at(14, fn () => $wallet->invest($james, $plans['alluvial-gold'], 4_000_000));
+        $this->at(3, fn () => $wallet->rejectWithdrawal($wallet->requestWithdrawal($james, 1_000_000, 'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297'), $admin, 'Please confirm this address belongs to you.'));
 
         // Waiting for the admin.
-        $this->at(2, fn () => $wallet->requestDeposit($chioma, 3_000_000, str_repeat('c3', 32)));
-        $this->at(0, fn () => Deposit::factory()->for($tunde)->create(['amount_sats' => 750_000]));
+        $this->at(2, fn () => $wallet->requestDeposit($olivia, 3_000_000, str_repeat('c3', 32)));
+        $this->at(0, fn () => Deposit::factory()->for($james)->create(['amount_sats' => 750_000]));
 
-        $wallet->accrue($ada->investments()->where('plan_id', $plans['hard-rock-gold']->id)->firstOrFail());
-        $wallet->accrue($ada->investments()->where('plan_id', $plans['hashrate-core']->id)->firstOrFail());
-        $wallet->accrue($tunde->investments()->firstOrFail());
+        $wallet->accrue($emma->investments()->where('plan_id', $plans['hard-rock-gold']->id)->firstOrFail());
+        $wallet->accrue($emma->investments()->where('plan_id', $plans['hashrate-core']->id)->firstOrFail());
+        $wallet->accrue($james->investments()->firstOrFail());
 
         Announcement::factory()->create([
-            'title' => 'Welcome to AurumBit',
+            'title' => 'Welcome to Hashvale',
             'body' => 'Verify your identity, fund your wallet and use the calculator on the Plans page to see what each plan earns before you invest.',
             'level' => 'info',
         ]);
@@ -92,7 +92,7 @@ class SampleDataSeeder extends Seeder
 
         $submission = KycSubmission::factory()->for($user)->create([
             'full_name' => $user->name,
-            'document_type' => 'national_id',
+            'document_type' => 'drivers_license',
             'document_path' => $document,
             'selfie_path' => $selfie,
         ]);

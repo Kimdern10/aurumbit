@@ -143,14 +143,14 @@ test('an admin publishes an announcement', function () {
 
 test('an admin saves site settings', function () {
     Livewire::actingAs(User::factory()->admin()->create())->test('pages::admin.settings')
-        ->set('siteName', 'AurumBit Capital')
+        ->set('siteName', 'Hashvale Capital')
         ->set('minWithdrawal', '0.0002')
         ->set('referralBonusPercent', '0.5')
         ->set('withdrawalRequiresKyc', false)
         ->call('save')
         ->assertHasNoErrors();
 
-    expect(Setting::get('site_name'))->toBe('AurumBit Capital')
+    expect(Setting::get('site_name'))->toBe('Hashvale Capital')
         ->and(Setting::integer('min_withdrawal_sats'))->toBe(20_000)
         ->and(Setting::integer('referral_bonus_bps'))->toBe(50)
         ->and(Setting::enabled('withdrawal_requires_kyc'))->toBeFalse();

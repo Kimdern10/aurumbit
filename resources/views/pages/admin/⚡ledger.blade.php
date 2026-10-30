@@ -73,7 +73,7 @@ new #[Title('Audit log')] class extends Component {
                 @forelse ($this->entries as $entry)
                     <flux:table.row :key="$entry->id">
                         <flux:table.cell class="text-xs text-zinc-500">{{ $entry->id }}</flux:table.cell>
-                        <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('j M Y, H:i:s') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $entry->created_at->format('M j, Y g:i:s A') }}</flux:table.cell>
                         <flux:table.cell>
                             <a href="{{ route('admin.users.show', $entry->user_id) }}" wire:navigate class="hover:underline">{{ $entry->user->name }}</a>
                         </flux:table.cell>

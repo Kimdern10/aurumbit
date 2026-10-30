@@ -15,7 +15,7 @@
     <p>If these change badly, the business behind the plans may struggle to pay, and you could lose some or all of your money.</p>
 
     <h2>Check who you invest with</h2>
-    <p>Before investing with any company, check that it is registered with the relevant regulator, such as the Securities and Exchange Commission in Nigeria, and is allowed to deal in digital assets. Our registration details are shown at the bottom of every page.</p>
+    <p>Before investing with any company, check that it is registered with the relevant regulator, such as the U.S. Securities and Exchange Commission (SEC), FINRA or your state securities regulator, and, where required, with FinCEN. You can look up firms on FINRA BrokerCheck and the SEC's Investment Adviser Public Disclosure website. Our registration details are shown at the bottom of every page.</p>
 
     <h2>Your money is locked for the term</h2>
     <p>Money placed in a plan cannot be taken out until the term ends. You may not be able to react to price changes during that time.</p>

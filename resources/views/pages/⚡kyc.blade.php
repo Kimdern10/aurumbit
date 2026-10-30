@@ -16,7 +16,7 @@ new #[Title('Verification')] class extends Component {
 
     public string $fullName = '';
 
-    public string $documentType = 'national_id';
+    public string $documentType = 'drivers_license';
 
     /** @var UploadedFile|null */
     public $document = null;
@@ -84,7 +84,7 @@ new #[Title('Verification')] class extends Component {
             <div>
                 <flux:heading>{{ $this->latest->status->label() }}</flux:heading>
                 <flux:text class="mt-1 text-sm">
-                    {{ __(':type sent on :date.', ['type' => $this->latest->documentTypeLabel(), 'date' => $this->latest->created_at->format('j M Y')]) }}
+                    {{ __(':type sent on :date.', ['type' => $this->latest->documentTypeLabel(), 'date' => $this->latest->created_at->format('M j, Y')]) }}
                     @if ($this->latest->status === KycStatus::Pending)
                         {{ __('An admin will review it soon.') }}
                     @elseif ($this->latest->status === KycStatus::Rejected)

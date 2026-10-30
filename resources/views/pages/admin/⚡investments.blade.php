@@ -98,7 +98,7 @@ new #[Title('Investments')] class extends Component {
                             <p class="text-xs text-zinc-500">{{ $investment->plan->name }}</p>
                         </flux:table.cell>
                         <flux:table.cell><x-btc :sats="$investment->amount_sats" /></flux:table.cell>
-                        <flux:table.cell class="whitespace-nowrap text-xs">{{ $investment->starts_at->format('j M') }} → {{ $investment->ends_at->format('j M Y') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap text-xs">{{ $investment->starts_at->format('M j') }} → {{ $investment->ends_at->format('M j, Y') }}</flux:table.cell>
                         <flux:table.cell><x-btc :sats="$investment->earned_sats" /></flux:table.cell>
                         <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
                         <flux:table.cell align="end">

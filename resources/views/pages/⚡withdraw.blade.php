@@ -127,7 +127,7 @@ new #[Title('Withdraw')] class extends Component {
             <flux:table.rows>
                 @forelse ($this->withdrawals as $withdrawal)
                     <flux:table.row :key="$withdrawal->id">
-                        <flux:table.cell>{{ $withdrawal->created_at->format('j M Y, H:i') }}</flux:table.cell>
+                        <flux:table.cell>{{ $withdrawal->created_at->format('M j, Y g:i A') }}</flux:table.cell>
                         <flux:table.cell><x-btc :sats="$withdrawal->amount_sats" /></flux:table.cell>
                         <flux:table.cell class="font-mono text-xs">{{ Str::limit($withdrawal->btc_address, 14, '…') }}{{ substr($withdrawal->btc_address, -6) }}</flux:table.cell>
                         <flux:table.cell>

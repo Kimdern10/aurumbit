@@ -70,7 +70,7 @@ new #[Title('Users')] class extends Component {
                                 <span class="text-xs text-zinc-400">{{ __('Not sent') }}</span>
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell class="whitespace-nowrap">{{ $user->created_at->format('j M Y') }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">{{ $user->created_at->format('M j, Y') }}</flux:table.cell>
                         <flux:table.cell align="end"><flux:button size="sm" :href="route('admin.users.show', $user)" wire:navigate>{{ __('Open') }}</flux:button></flux:table.cell>
                     </flux:table.row>
                 @empty
