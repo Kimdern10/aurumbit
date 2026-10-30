@@ -25,7 +25,7 @@ class CreateNewUser implements CreatesNewUsers
             'terms' => ['accepted'],
             'ref' => ['nullable', 'string', 'max:16'],
         ], [
-            'terms.accepted' => 'Please confirm you have read the terms and the risk disclosure.',
+            'terms.accepted' => 'Please agree to the terms of use and privacy policy.',
         ])->validate();
 
         $user = new User([

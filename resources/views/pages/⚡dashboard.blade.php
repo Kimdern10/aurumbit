@@ -143,8 +143,8 @@ new #[Title('Dashboard')] class extends Component {
             <flux:progress class="mt-3" :value="intdiv($steps->where('done', true)->count() * 100, $steps->count())" />
             <div class="mt-4 grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
                 @foreach ($steps as $step)
-                    <a href="{{ $step['url'] }}" wire:navigate @class(['flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition', 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300' => $step['done'], 'border-zinc-200 hover:border-gold-400 dark:border-white/10' => ! $step['done']])>
-                        <flux:icon :name="$step['done'] ? 'check-circle' : 'arrow-right-circle'" variant="mini" @class(['shrink-0', 'text-gold-600' => ! $step['done']]) />
+                    <a href="{{ $step['url'] }}" wire:navigate @class(['flex items-center gap-2 rounded-lg border px-3 py-2.5 text-sm transition', 'border-green-200 bg-green-50 text-green-800 dark:border-green-500/30 dark:bg-green-500/10 dark:text-green-300' => $step['done'], 'border-zinc-200 hover:border-brand-400 dark:border-white/10' => ! $step['done']])>
+                        <flux:icon :name="$step['done'] ? 'check-circle' : 'arrow-right-circle'" variant="mini" @class(['shrink-0', 'text-brand-600' => ! $step['done']]) />
                         {{ $step['label'] }}
                     </a>
                 @endforeach
@@ -211,7 +211,7 @@ new #[Title('Dashboard')] class extends Component {
     @if ($this->plans->isNotEmpty())
         <div>
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <flux:heading class="flex items-center gap-2"><flux:icon.calculator variant="mini" class="text-gold-600" /> {{ __('BTC plan calculator') }}</flux:heading>
+                <flux:heading class="flex items-center gap-2"><flux:icon.calculator variant="mini" class="text-brand-600" /> {{ __('BTC plan calculator') }}</flux:heading>
                 <flux:text class="text-sm">{{ __('Your balance: :amount BTC', ['amount' => Btc::format($this->totals['balance'])]) }}</flux:text>
             </div>
             <x-returns-calculator class="mt-3" :plans="$this->plans" :btc-price-cents="$this->btcPriceCents" />

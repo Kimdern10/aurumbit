@@ -12,7 +12,7 @@
     </ul>
 
     <h2>3. Plans</h2>
-    <p>Each plan lists its term, minimum and maximum amounts, a risk level and its rate for the full term. Earnings are added daily at that rate and paid to your balance with your capital at the end of the term. Money placed in a plan is locked until then. If we have to close a plan early, your capital is returned to your balance.</p>
+    <p>Each plan lists its term, minimum and maximum amounts and its rate for the full term. Earnings are added daily at that rate and paid to your balance with your capital at the end of the term. Money placed in a plan is locked until then. If we have to close a plan early, your capital is returned to your balance.</p>
 
     <h2>4. Deposits and withdrawals</h2>
     <ul>

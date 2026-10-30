@@ -76,12 +76,12 @@ new #[Title('Admin overview')] class extends Component {
             ['label' => __('Withdrawals to review'), 'count' => $pending['withdrawals'], 'route' => 'admin.withdrawals', 'icon' => 'arrow-up-tray'],
             ['label' => __('Identity checks to review'), 'count' => $pending['kyc'], 'route' => 'admin.kyc', 'icon' => 'identification'],
         ] as $queue)
-            <a href="{{ route($queue['route']) }}" wire:navigate.hover class="group flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-gold-400 dark:border-white/10 dark:bg-navy-900">
+            <a href="{{ route($queue['route']) }}" wire:navigate.hover class="group flex items-center justify-between rounded-xl border border-zinc-200 bg-white p-4 transition hover:border-brand-400 dark:border-white/10 dark:bg-ink-900">
                 <div>
                     <flux:text class="text-sm">{{ $queue['label'] }}</flux:text>
                     <p class="mt-1 font-display text-2xl font-semibold text-zinc-900 dark:text-white">{{ $queue['count'] }}</p>
                 </div>
-                <flux:icon :name="$queue['icon']" @class(['size-8', 'text-gold-500' => $queue['count'] > 0, 'text-zinc-300 dark:text-zinc-600' => $queue['count'] === 0]) />
+                <flux:icon :name="$queue['icon']" @class(['size-8', 'text-brand-500' => $queue['count'] > 0, 'text-zinc-300 dark:text-zinc-600' => $queue['count'] === 0]) />
             </a>
         @endforeach
     </div>

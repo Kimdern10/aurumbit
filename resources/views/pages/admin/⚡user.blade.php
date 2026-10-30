@@ -29,7 +29,7 @@ new #[Title('User')] class extends Component {
         $sats = (int) Btc::toSats(ltrim($this->adjustAmount, '-'));
 
         try {
-            $wallet->adjust($this->user, $negative ? -$sats : $sats, 'Admin adjustment: '.$this->adjustReason, Auth::user());
+            $wallet->adjust($this->user, $negative ? -$sats : $sats, $this->adjustReason, Auth::user());
         } catch (WalletException $exception) {
             $this->addError('adjustAmount', $exception->getMessage());
 
@@ -82,9 +82,9 @@ new #[Title('User')] class extends Component {
         <flux:card>
             <form wire:submit="adjust" class="space-y-4">
                 <flux:heading>{{ __('Adjust balance') }}</flux:heading>
-                <flux:text class="text-sm">{{ __('For corrections only. Every adjustment is written to the audit log with your name.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('The customer sees this as a "Balance adjustment" with the description below. Your name is kept in the admin audit log only.') }}</flux:text>
                 <flux:input wire:model="adjustAmount" :label="__('Amount (BTC)')" placeholder="0.01 or -0.01" inputmode="decimal" />
-                <flux:input wire:model="adjustReason" :label="__('Reason')" />
+                <flux:input wire:model="adjustReason" :label="__('Description the customer sees')" :placeholder="__('e.g. Welcome bonus')" />
                 <flux:button type="submit" variant="primary">{{ __('Apply adjustment') }}</flux:button>
             </form>
         </flux:card>

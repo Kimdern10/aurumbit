@@ -15,7 +15,7 @@
 <meta property="og:description" content="{{ $pageDescription }}">
 <meta property="og:url" content="{{ url()->current() }}">
 <meta name="twitter:card" content="summary">
-<meta name="theme-color" content="#0b1b3a">
+<meta name="theme-color" content="#1652f0">
 @if (! request()->routeIs('home', 'legal.*'))
     <meta name="robots" content="noindex">
 @endif

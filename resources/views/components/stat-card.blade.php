@@ -4,7 +4,7 @@
     <div class="flex items-center justify-between gap-2">
         <flux:text class="text-sm font-medium">{{ $label }}</flux:text>
         @if ($icon)
-            <span class="flex size-8 items-center justify-center rounded-lg bg-gold-100 text-gold-700 dark:bg-gold-400/15 dark:text-gold-300">
+            <span class="flex size-8 items-center justify-center rounded-lg bg-brand-100 text-brand-700 dark:bg-brand-400/15 dark:text-brand-300">
                 <flux:icon :name="$icon" variant="mini" />
             </span>
         @endif

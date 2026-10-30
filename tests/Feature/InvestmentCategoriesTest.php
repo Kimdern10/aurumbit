@@ -104,3 +104,12 @@ test('public pages use the new brand and contain nothing Nigeria-specific', func
         ->assertDontSee('AurumBit')
         ->assertDontSee('Nigeria');
 })->with(['home', 'legal.terms', 'legal.risk', 'legal.privacy', 'register']);
+
+test('plan pages show rates without risk labels', function () {
+    Plan::factory()->create(['name' => 'Hash Plan', 'target_return_bps' => 350, 'duration_days' => 30, 'risk_level' => 'very_high']);
+
+    $this->actingAs(User::factory()->create())->get(route('invest'))
+        ->assertSee('Hash Plan')
+        ->assertSee('3.5%')
+        ->assertDontSee('Very high risk');
+});

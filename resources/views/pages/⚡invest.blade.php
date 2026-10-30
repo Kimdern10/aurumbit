@@ -91,7 +91,7 @@ new #[Title('Plans')] class extends Component {
             'acceptRisk' => ['accepted'],
         ], [
             'amount.regex' => __('Enter an amount in BTC, with up to 8 decimal places.'),
-            'acceptRisk.accepted' => __('Please confirm you understand the risks.'),
+            'acceptRisk.accepted' => __('Please confirm before investing.'),
         ]);
 
         try {
@@ -115,8 +115,8 @@ new #[Title('Plans')] class extends Component {
         <flux:text class="mt-1">{{ __('Available balance:') }} <x-btc :sats="auth()->user()->balance_sats" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
     </div>
 
-    <flux:callout color="amber" icon="exclamation-triangle">
-        <flux:callout.text>{{ __('Earnings build up every day at the plan rate and are paid with your capital at the end of the term. Money in a plan is locked until then. Investing carries risk.') }}</flux:callout.text>
+    <flux:callout color="blue" icon="information-circle">
+        <flux:callout.text>{{ __('Earnings build up every day at the plan rate and are paid with your capital at the end of the term.') }}</flux:callout.text>
     </flux:callout>
 
     @if ($this->plans->isNotEmpty())
@@ -129,7 +129,7 @@ new #[Title('Plans')] class extends Component {
     <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         @foreach ($this->tabs as $value => $label)
             <button type="button" wire:click="$set('category', '{{ $value }}')" wire:key="tab-{{ $value ?: 'all' }}"
-                @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $category === $value, 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $category !== $value])>
+                @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium transition', 'border-brand-500 bg-brand-500 text-white dark:text-ink-950' => $category === $value, 'border-zinc-200 bg-white hover:border-brand-400 dark:border-white/10 dark:bg-ink-900' => $category !== $value])>
                 {{ $label }}
             </button>
         @endforeach
@@ -143,7 +143,7 @@ new #[Title('Plans')] class extends Component {
                         <flux:badge size="sm" :color="$plan->category->badgeColor()">{{ $plan->category->label() }}</flux:badge>
                         <flux:heading size="lg" class="mt-2">{{ $plan->name }}</flux:heading>
                     </div>
-                    <flux:badge size="sm" :color="$plan->risk_level === 'medium' ? 'amber' : 'red'">{{ __(':level risk', ['level' => $plan->riskLabel()]) }}</flux:badge>
+                    <span class="text-right"><span class="block font-display text-2xl font-extrabold text-zinc-900 dark:text-white">{{ $plan->targetPercent() }}%</span><span class="text-xs text-zinc-500">{{ __('in :days days', ['days' => $plan->duration_days]) }}</span></span>
                 </div>
                 <flux:text class="mt-2 text-sm">{{ $plan->summary }}</flux:text>
                 <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
@@ -170,7 +170,7 @@ new #[Title('Plans')] class extends Component {
             <form wire:submit="invest" class="space-y-5">
                 <div>
                     <flux:heading size="lg">{{ $plan->name }}</flux:heading>
-                    <flux:text class="mt-1 text-sm">{{ trans_choice(':count day term|:count days term', $plan->duration_days) }} · {{ __(':level risk', ['level' => $plan->riskLabel()]) }}</flux:text>
+                    <flux:text class="mt-1 text-sm">{{ trans_choice(':count day term|:count days term', $plan->duration_days) }} · {{ __(':rate% total', ['rate' => $plan->targetPercent()]) }}</flux:text>
                 </div>
 
                 <flux:input wire:model.live.debounce.400ms="amount" :label="__('Amount (BTC)')" inputmode="decimal" autocomplete="off"
@@ -191,7 +191,7 @@ new #[Title('Plans')] class extends Component {
 
                 <flux:field variant="inline">
                     <flux:checkbox wire:model="acceptRisk" />
-                    <flux:label class="text-sm leading-snug">{{ __('I understand my money is locked until the end of the term and that investing carries risk.') }}</flux:label>
+                    <flux:label class="text-sm leading-snug">{{ __('I understand my money stays in this plan until the end of the term.') }}</flux:label>
                     <flux:error name="acceptRisk" />
                 </flux:field>
 

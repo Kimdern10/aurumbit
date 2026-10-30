@@ -56,9 +56,9 @@ new #[Title('Notifications')] class extends Component {
             @php($tone = $notification->data['tone'] ?? 'info')
             <button type="button" wire:key="n-{{ $notification->id }}" wire:click="open('{{ $notification->id }}')"
                 @class([
-                    'flex w-full items-start gap-3 rounded-xl border p-4 text-start transition hover:border-gold-400',
-                    'border-gold-300 bg-gold-50/60 dark:border-gold-400/40 dark:bg-gold-400/5' => $notification->read_at === null,
-                    'border-zinc-200 bg-white dark:border-white/10 dark:bg-navy-900' => $notification->read_at !== null,
+                    'flex w-full items-start gap-3 rounded-xl border p-4 text-start transition hover:border-brand-400',
+                    'border-brand-300 bg-brand-50/60 dark:border-brand-400/40 dark:bg-brand-400/5' => $notification->read_at === null,
+                    'border-zinc-200 bg-white dark:border-white/10 dark:bg-ink-900' => $notification->read_at !== null,
                 ])>
                 <flux:icon :name="match ($tone) { 'success' => 'check-circle', 'danger' => 'x-circle', default => 'information-circle' }"
                     @class(['mt-0.5 size-5 shrink-0', 'text-green-600' => $tone === 'success', 'text-red-600' => $tone === 'danger', 'text-sky-600' => $tone === 'info']) />

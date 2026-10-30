@@ -64,11 +64,10 @@
                 <flux:checkbox name="terms" value="1" :checked="(bool) old('terms')" required />
                 <flux:label class="text-sm leading-snug">
                     <span>
-                        {{ __('I have read the') }}
-                        <a href="{{ route('legal.terms') }}" target="_blank" class="font-medium underline">{{ __('terms') }}</a>
+                        {{ __('I agree to the') }}
+                        <a href="{{ route('legal.terms') }}" target="_blank" class="font-medium underline">{{ __('Terms of use') }}</a>
                         {{ __('and') }}
-                        <a href="{{ route('legal.risk') }}" target="_blank" class="font-medium underline">{{ __('risk disclosure') }}</a>,
-                        {{ __('and I understand my capital is at risk.') }}
+                        <a href="{{ route('legal.privacy') }}" target="_blank" class="font-medium underline">{{ __('Privacy policy') }}</a>.
                     </span>
                 </flux:label>
                 <flux:error name="terms" />

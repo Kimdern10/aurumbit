@@ -6,8 +6,8 @@
         <div wire:key="m-{{ $message->id }}" @class(['flex', 'justify-end' => $mine])>
             <div @class([
                 'max-w-[85%] rounded-2xl px-4 py-3 text-sm',
-                'rounded-br-sm bg-navy-900 text-white dark:bg-gold-400/15 dark:text-gold-50' => $mine,
-                'rounded-bl-sm border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-navy-900 dark:text-zinc-100' => ! $mine,
+                'rounded-br-sm bg-ink-900 text-white dark:bg-brand-400/15 dark:text-brand-50' => $mine,
+                'rounded-bl-sm border border-zinc-200 bg-white text-zinc-800 dark:border-white/10 dark:bg-ink-900 dark:text-zinc-100' => ! $mine,
             ])>
                 <p class="mb-1 text-xs font-semibold opacity-70">
                     {{ $message->from_staff ? __(':site support', ['site' => \App\Models\Setting::get('site_name')]) : $ticket->user->name }}

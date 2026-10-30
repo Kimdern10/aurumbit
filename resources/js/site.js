@@ -171,7 +171,7 @@ function initHeroCanvas() {
                 const b = points[j];
                 const d = Math.hypot(a.x - b.x, a.y - b.y);
                 if (d < 120) {
-                    ctx.strokeStyle = `rgba(224, 180, 52, ${0.18 * (1 - d / 120)})`;
+                    ctx.strokeStyle = `rgba(22, 82, 240, ${0.16 * (1 - d / 120)})`;
                     ctx.lineWidth = 1;
                     ctx.beginPath();
                     ctx.moveTo(a.x, a.y);
@@ -182,7 +182,7 @@ function initHeroCanvas() {
         }
 
         for (const p of points) {
-            ctx.fillStyle = 'rgba(236, 201, 85, 0.75)';
+            ctx.fillStyle = 'rgba(22, 82, 240, 0.45)';
             ctx.beginPath();
             ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
             ctx.fill();

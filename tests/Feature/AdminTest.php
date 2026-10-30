@@ -39,7 +39,13 @@ test('an admin can open a user and adjust their balance', function () {
         ->assertHasNoErrors();
 
     expect($user->fresh()->balance_sats)->toBe(60_000)
-        ->and($user->ledgerEntries()->sole()->description)->toContain('Duplicate credit');
+        ->and($user->ledgerEntries()->sole()->description)->toBe('Duplicate credit');
+
+    $this->actingAs($user)->get(route('transactions'))
+        ->assertSee('Balance adjustment')
+        ->assertSee('Duplicate credit')
+        ->assertDontSee('Admin')
+        ->assertDontSee($admin->name);
 });
 
 test('an admin can suspend a user', function () {

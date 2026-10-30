@@ -31,15 +31,15 @@
         <svg viewBox="0 0 {{ $width }} {{ $height }}" preserveAspectRatio="none" class="w-full overflow-visible" style="height: {{ $height }}px" role="img" aria-label="{{ __('Chart') }}">
             <defs>
                 <linearGradient id="{{ $gradientId }}" x1="0" x2="0" y1="0" y2="1">
-                    <stop offset="0" stop-color="#e0b434" stop-opacity="0.35" />
-                    <stop offset="1" stop-color="#e0b434" stop-opacity="0" />
+                    <stop offset="0" stop-color="#1652f0" stop-opacity="0.35" />
+                    <stop offset="1" stop-color="#1652f0" stop-opacity="0" />
                 </linearGradient>
             </defs>
             @foreach ([0.25, 0.5, 0.75] as $grid)
                 <line x1="0" x2="{{ $width }}" y1="{{ $height * $grid }}" y2="{{ $height * $grid }}" class="stroke-zinc-200 dark:stroke-white/10" stroke-dasharray="4 6" vector-effect="non-scaling-stroke" />
             @endforeach
             <path d="{{ $area }}" fill="url(#{{ $gradientId }})" />
-            <path d="{{ $line }}" fill="none" stroke="#c9a227" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
+            <path d="{{ $line }}" fill="none" stroke="#1652f0" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
             @foreach ($coords as $i => [$x, $y])
                 <circle cx="{{ $x }}" cy="{{ $y }}" r="9" fill="transparent" class="peer"><title>{{ $points[$i]['label'] }}: {{ $points[$i]['text'] ?? $points[$i]['value'] }}</title></circle>
             @endforeach

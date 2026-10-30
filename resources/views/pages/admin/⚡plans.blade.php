@@ -191,9 +191,9 @@ new #[Title('Plans')] class extends Component {
     </div>
 
     <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
-        <button type="button" wire:click="$set('filter', '')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $filter === '', 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $filter !== ''])>{{ __('All') }} ({{ array_sum($this->counts) }})</button>
+        <button type="button" wire:click="$set('filter', '')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-brand-500 bg-brand-500 text-white dark:text-ink-950' => $filter === '', 'border-zinc-200 bg-white hover:border-brand-400 dark:border-white/10 dark:bg-ink-900' => $filter !== ''])>{{ __('All') }} ({{ array_sum($this->counts) }})</button>
         @foreach (PlanCategory::cases() as $case)
-            <button type="button" wire:key="filter-{{ $case->value }}" wire:click="$set('filter', '{{ $case->value }}')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-gold-500 bg-gold-500 text-white dark:text-navy-950' => $filter === $case->value, 'border-zinc-200 bg-white hover:border-gold-400 dark:border-white/10 dark:bg-navy-900' => $filter !== $case->value])>{{ $case->label() }} ({{ $this->counts[$case->value] ?? 0 }})</button>
+            <button type="button" wire:key="filter-{{ $case->value }}" wire:click="$set('filter', '{{ $case->value }}')" @class(['shrink-0 rounded-full border px-4 py-1.5 text-sm font-medium', 'border-brand-500 bg-brand-500 text-white dark:text-ink-950' => $filter === $case->value, 'border-zinc-200 bg-white hover:border-brand-400 dark:border-white/10 dark:bg-ink-900' => $filter !== $case->value])>{{ $case->label() }} ({{ $this->counts[$case->value] ?? 0 }})</button>
         @endforeach
     </div>
 
@@ -212,7 +212,7 @@ new #[Title('Plans')] class extends Component {
                     <flux:table.row :key="$plan->id">
                         <flux:table.cell>
                             <p class="font-medium text-zinc-900 dark:text-white">{{ $plan->name }}</p>
-                            <p class="text-xs text-zinc-500"><flux:badge size="sm" :color="$plan->category->badgeColor()" class="me-1">{{ $plan->category->label() }}</flux:badge> {{ __(':level risk', ['level' => $plan->riskLabel()]) }}</p>
+                            <p class="text-xs text-zinc-500"><flux:badge size="sm" :color="$plan->category->badgeColor()" class="me-1">{{ $plan->category->label() }}</flux:badge></p>
                         </flux:table.cell>
                         <flux:table.cell class="text-xs"><x-btc :sats="$plan->min_sats" /> – @if ($plan->max_sats)<x-btc :sats="$plan->max_sats" />@else ∞ @endif</flux:table.cell>
                         <flux:table.cell>{{ trans_choice(':count day|:count days', $plan->duration_days) }} · {{ $plan->targetPercent() }}%</flux:table.cell>
@@ -253,15 +253,10 @@ new #[Title('Plans')] class extends Component {
                 <flux:input wire:model="maxBtc" :label="__('Maximum (BTC)')" inputmode="decimal" :placeholder="__('No limit')" />
                 <flux:input wire:model.live.debounce.400ms="durationDays" type="number" min="1" :label="__('Term (days)')" />
                 <flux:input wire:model.live.debounce.400ms="targetPercent" :label="__('Rate for the whole term (%)')" inputmode="decimal" :description="__('e.g. 3.5 means 3.5% profit after the full term, spread evenly per day.')" />
-                <flux:select wire:model="riskLevel" :label="__('Risk level')">
-                    @foreach (Plan::RISK_LEVELS as $value => $label)
-                        <flux:select.option :value="$value">{{ $label }}</flux:select.option>
-                    @endforeach
-                </flux:select>
                 <flux:input wire:model="sortOrder" type="number" min="0" :label="__('Order')" />
             </div>
             @if ($preview = $this->preview())
-                <div class="rounded-lg bg-gold-50 p-3 text-sm text-gold-900 dark:bg-gold-400/10 dark:text-gold-100">
+                <div class="rounded-lg bg-brand-50 p-3 text-sm text-brand-900 dark:bg-brand-400/10 dark:text-brand-100">
                     <p class="font-medium">{{ __('Customer preview for 0.1 BTC') }}</p>
                     <p class="mt-1">{{ __(':daily BTC a day · +:profit BTC profit · :total BTC paid back after :days days', ['daily' => Btc::format($preview['daily']), 'profit' => Btc::format($preview['profit']), 'total' => Btc::format($preview['total']), 'days' => $preview['days']]) }}</p>
                 </div>

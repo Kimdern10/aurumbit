@@ -47,7 +47,7 @@ new #[Title('My investments')] class extends Component {
                             <p class="font-medium text-zinc-900 dark:text-white">{{ $investment->plan->name }}</p>
                             <p class="text-xs text-zinc-500">{{ $investment->starts_at->format('M j, Y') }} → {{ $investment->ends_at->format('M j, Y') }}</p>
                             @if ($investment->gold_mg)
-                                <p class="text-xs text-gold-700 dark:text-gold-300">{{ __('≈ :grams g of gold at start', ['grams' => number_format($investment->gold_mg / 1000, 3)]) }}</p>
+                                <p class="text-xs text-amber-700 dark:text-amber-300">{{ __('≈ :grams g of gold at start', ['grams' => number_format($investment->gold_mg / 1000, 3)]) }}</p>
                             @endif
                         </flux:table.cell>
                         <flux:table.cell><x-btc :sats="$investment->amount_sats" /></flux:table.cell>

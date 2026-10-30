@@ -3,16 +3,16 @@
     <head>
         @include('partials.head')
     </head>
-    <body class="min-h-screen bg-zinc-50 dark:bg-navy-950">
+    <body class="min-h-screen bg-zinc-50 dark:bg-ink-950">
         @php($isAdmin = auth()->user()->is_admin)
-        <flux:sidebar sticky collapsible="mobile" class="{{ $isAdmin ? 'dark border-e border-navy-800 bg-navy-950 text-zinc-200' : 'border-e border-zinc-200 bg-white dark:border-white/10 dark:bg-navy-900' }}">
+        <flux:sidebar sticky collapsible="mobile" class="{{ $isAdmin ? 'dark border-e border-ink-800 bg-ink-950 text-zinc-200' : 'border-e border-zinc-200 bg-white dark:border-white/10 dark:bg-ink-900' }}">
             <flux:sidebar.header>
                 <x-app-logo :sidebar="true" href="{{ $isAdmin ? route('admin.dashboard') : route('dashboard') }}" wire:navigate />
                 <flux:sidebar.collapse class="lg:hidden" />
             </flux:sidebar.header>
 
             @if ($isAdmin)
-                <div class="mx-2 rounded-lg bg-gold-400/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-gold-300 uppercase in-data-flux-sidebar-collapsed-desktop:hidden">{{ __('Admin panel') }}</div>
+                <div class="mx-2 rounded-lg bg-brand-400/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-brand-300 uppercase in-data-flux-sidebar-collapsed-desktop:hidden">{{ __('Admin panel') }}</div>
             @endif
 
             <flux:sidebar.nav>
