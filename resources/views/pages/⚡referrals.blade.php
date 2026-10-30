@@ -30,7 +30,7 @@ new #[Title('Referrals')] class extends Component {
 <div class="max-w-4xl space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Referrals') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Invite friends with your link. When someone you invited has their first deposit approved, you get a simulated bonus of :percent% of it.', ['percent' => rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2), '0'), '.')]) }}</flux:text>
+        <flux:text class="mt-1">{{ __('Invite friends with your link. When someone you invited has their first deposit approved, you get a bonus of :percent% of it.', ['percent' => rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2), '0'), '.')]) }}</flux:text>
     </div>
 
     <flux:card class="space-y-3">
@@ -44,7 +44,7 @@ new #[Title('Referrals')] class extends Component {
 
     <div class="grid gap-4 sm:grid-cols-2">
         <x-stat-card :label="__('People invited')" icon="users">{{ $this->referrals->count() }}</x-stat-card>
-        <x-stat-card :label="__('Simulated bonuses')" icon="gift"><x-btc :sats="$this->bonusSats" /></x-stat-card>
+        <x-stat-card :label="__('Bonuses earned')" icon="gift"><x-btc :sats="$this->bonusSats" /></x-stat-card>
     </div>
 
     <flux:card>
@@ -61,5 +61,5 @@ new #[Title('Referrals')] class extends Component {
         </ul>
     </flux:card>
 
-    <flux:text class="text-xs">{{ __('Please share responsibly: do not promise anyone returns, and do not spam. Bonuses are simulated in this demo.') }}</flux:text>
+    <flux:text class="text-xs">{{ __('Please share responsibly and do not spam.') }}</flux:text>
 </div>

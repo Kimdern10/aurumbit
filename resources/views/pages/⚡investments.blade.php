@@ -26,7 +26,7 @@ new #[Title('My investments')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('My investments') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Simulated earnings update daily and are paid with your principal at the end of each term.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Earnings update daily and are paid with your capital at the end of each term.') }}</flux:text>
         </div>
         <flux:button :href="route('invest')" variant="primary" icon="sparkles" wire:navigate>{{ __('New investment') }}</flux:button>
     </div>
@@ -37,7 +37,7 @@ new #[Title('My investments')] class extends Component {
                 <flux:table.column>{{ __('Plan') }}</flux:table.column>
                 <flux:table.column>{{ __('Amount') }}</flux:table.column>
                 <flux:table.column>{{ __('Progress') }}</flux:table.column>
-                <flux:table.column>{{ __('Simulated earnings') }}</flux:table.column>
+                <flux:table.column>{{ __('Earnings') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
             </flux:table.columns>
             <flux:table.rows>

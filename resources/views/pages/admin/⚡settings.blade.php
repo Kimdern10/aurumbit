@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Setting;
+use App\Rules\BitcoinAddress;
 use App\Support\Btc;
 use Flux\Flux;
 use Livewire\Attributes\Title;
@@ -17,7 +18,9 @@ new #[Title('Site settings')] class extends Component {
 
     public string $companyDetails = '';
 
-    public string $demoDepositAddress = '';
+    public string $depositAddress = '';
+
+    public string $explorerTxUrl = '';
 
     public string $minDeposit = '';
 
@@ -34,7 +37,8 @@ new #[Title('Site settings')] class extends Component {
         $this->supportEmail = Setting::get('support_email');
         $this->seoDescription = Setting::get('seo_description');
         $this->companyDetails = Setting::get('company_details');
-        $this->demoDepositAddress = Setting::get('demo_deposit_address');
+        $this->depositAddress = Setting::get('deposit_address');
+        $this->explorerTxUrl = Setting::get('explorer_tx_url');
         $this->minDeposit = Btc::format(Setting::integer('min_deposit_sats'));
         $this->minWithdrawal = Btc::format(Setting::integer('min_withdrawal_sats'));
         $this->withdrawalRequiresKyc = Setting::enabled('withdrawal_requires_kyc');
@@ -43,13 +47,16 @@ new #[Title('Site settings')] class extends Component {
 
     public function save(): void
     {
+        $this->depositAddress = trim($this->depositAddress);
+
         $validated = $this->validate([
             'siteName' => ['required', 'string', 'max:60'],
             'tagline' => ['required', 'string', 'max:160'],
             'supportEmail' => ['required', 'email', 'max:120'],
             'seoDescription' => ['required', 'string', 'max:300'],
-            'companyDetails' => ['required', 'string', 'max:500'],
-            'demoDepositAddress' => ['required', 'string', 'max:100'],
+            'companyDetails' => ['nullable', 'string', 'max:500'],
+            'depositAddress' => ['nullable', 'string', 'max:100', new BitcoinAddress],
+            'explorerTxUrl' => ['required', 'url:https', 'max:200'],
             'minDeposit' => ['required', 'regex:'.Btc::INPUT_PATTERN],
             'minWithdrawal' => ['required', 'regex:'.Btc::INPUT_PATTERN],
             'withdrawalRequiresKyc' => ['boolean'],
@@ -64,7 +71,8 @@ new #[Title('Site settings')] class extends Component {
             'support_email' => $validated['supportEmail'],
             'seo_description' => $validated['seoDescription'],
             'company_details' => $validated['companyDetails'],
-            'demo_deposit_address' => $validated['demoDepositAddress'],
+            'deposit_address' => $validated['depositAddress'],
+            'explorer_tx_url' => $validated['explorerTxUrl'],
             'min_deposit_sats' => Btc::toSats($validated['minDeposit']),
             'min_withdrawal_sats' => Btc::toSats($validated['minWithdrawal']),
             'withdrawal_requires_kyc' => $validated['withdrawalRequiresKyc'],
@@ -79,7 +87,7 @@ new #[Title('Site settings')] class extends Component {
 <div class="max-w-3xl space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Site settings') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('The platform stays in demo mode. Real payments need a licensed business, a custody and compliance plan, and a separate build.') }}</flux:text>
+        <flux:text class="mt-1">{{ __('The site never stores wallet private keys. Deposits are checked on the blockchain by an admin, and withdrawals are paid from the company wallet.') }}</flux:text>
     </div>
 
     <form wire:submit="save" class="space-y-6">
@@ -91,12 +99,14 @@ new #[Title('Site settings')] class extends Component {
             </div>
             <flux:input wire:model="tagline" :label="__('Tagline')" />
             <flux:textarea wire:model="seoDescription" :label="__('Description for Google')" rows="2" />
-            <flux:textarea wire:model="companyDetails" :label="__('Company and licence details (footer)')" rows="2" />
+            <flux:textarea wire:model="companyDetails" :label="__('Company registration and licence details (shown in the footer)')" rows="2" :description="__('For example the RC number and SEC registration number.')" />
         </flux:card>
 
         <flux:card class="space-y-4">
-            <flux:heading>{{ __('Wallet rules') }}</flux:heading>
-            <flux:input wire:model="demoDepositAddress" :label="__('Demo deposit address')" :description="__('Shown on the deposit page. Keep it obviously fake so nobody sends real coins.')" class="font-mono" />
+            <flux:heading>{{ __('Wallet') }}</flux:heading>
+            <flux:input wire:model="depositAddress" :label="__('Company BTC deposit address')" class="font-mono"
+                :description="__('Customers send BTC here. Leave empty to close deposits. Double-check it: coins sent to a wrong address are lost.')" />
+            <flux:input wire:model="explorerTxUrl" :label="__('Blockchain explorer link for transactions')" :description="__('Used for the Check on blockchain links, e.g. https://mempool.space/tx/')" />
             <div class="grid gap-4 sm:grid-cols-3">
                 <flux:input wire:model="minDeposit" :label="__('Minimum deposit (BTC)')" inputmode="decimal" />
                 <flux:input wire:model="minWithdrawal" :label="__('Minimum withdrawal (BTC)')" inputmode="decimal" />

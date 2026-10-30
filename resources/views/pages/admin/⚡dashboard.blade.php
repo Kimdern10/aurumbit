@@ -66,7 +66,7 @@ new #[Title('Admin overview')] class extends Component {
 <div class="space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Admin overview') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('All figures are simulated demo balances.') }}</flux:text>
+        <flux:text class="mt-1">{{ __('Customer balances, plans and requests waiting for you.') }}</flux:text>
     </div>
 
     @php($pending = AdminCounts::pending())
@@ -88,7 +88,7 @@ new #[Title('Admin overview')] class extends Component {
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat-card :label="__('Users')" icon="users">{{ number_format($this->totals['users']) }}</x-stat-card>
-        <x-stat-card :label="__('Balances held (simulated)')" icon="wallet"><x-btc :sats="$this->totals['balances']" /></x-stat-card>
+        <x-stat-card :label="__('Customer balances')" icon="wallet"><x-btc :sats="$this->totals['balances']" /></x-stat-card>
         <x-stat-card :label="__('In active plans')" icon="chart-pie"><x-btc :sats="$this->totals['invested']" /></x-stat-card>
         <x-stat-card :label="__('Active investments')" icon="sparkles">{{ number_format($this->totals['active']) }}</x-stat-card>
     </div>

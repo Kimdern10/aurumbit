@@ -6,9 +6,9 @@
     $goldPlans = $plans->where('category', PlanCategory::Gold);
 
     $faqs = [
-        ['q' => 'Is this a real investment platform?', 'a' => 'No. This is a demo. No Bitcoin is received, held or sent. Every balance, deposit, earning and withdrawal is simulated so you can see how the platform works.'],
-        ['q' => 'Are returns guaranteed?', 'a' => 'No. Each plan shows an indicative target used for the demo simulation. Real mining income depends on prices, network difficulty, energy costs and operations, and can be lower than the target or nothing at all.'],
-        ['q' => 'How do withdrawals work?', 'a' => 'You request a withdrawal to your own Bitcoin address. We check the address format and checksum, hold the amount from your balance, and an admin reviews it. In this demo nothing is sent on-chain.'],
+        ['q' => 'How do I deposit?', 'a' => 'Send Bitcoin to our deposit address shown in your dashboard, then enter the amount and the transaction ID. Your balance is credited once the transaction is confirmed on the blockchain and checked by our team.'],
+        ['q' => 'How much will I earn?', 'a' => 'Each plan has a rate for its full term. Your earnings build up every day and are paid with your capital at the end of the term. Use the calculator above to see the exact figures for any plan and amount.'],
+        ['q' => 'How do withdrawals work?', 'a' => 'You request a withdrawal to your own Bitcoin address. We check the address and its checksum, hold the amount from your balance, and our team sends the BTC after review. You can follow the payment on the blockchain.'],
         ['q' => 'Why do you ask for identity documents?', 'a' => 'Know-your-customer (KYC) checks help prevent fraud and money laundering. Your documents are stored privately and only reviewed by an admin.'],
         ['q' => 'How are gold plans priced?', 'a' => 'Gold plans are funded in BTC. When you start a plan, we show the gold equivalent at that moment using the live PAX Gold price (one token is backed by one troy ounce of gold).'],
         ['q' => 'Can I lose money?', 'a' => 'With real crypto and commodity investments, yes, you can lose some or all of your money. Please read the risk disclosure before investing anywhere.'],
@@ -26,7 +26,7 @@
             <div>
                 <p data-reveal class="inline-flex items-center gap-2 rounded-full border border-gold-300/30 bg-white/5 px-3 py-1 text-xs font-medium text-gold-200">
                     <span class="relative flex size-2"><span class="absolute inline-flex size-full animate-ping rounded-full bg-gold-300 opacity-75"></span><span class="relative inline-flex size-2 rounded-full bg-gold-400"></span></span>
-                    {{ __('Bitcoin & gold mining plans · Demo mode') }}
+                    {{ __('Bitcoin & gold mining plans') }}
                 </p>
 
                 <h1 data-reveal style="--reveal-delay: 80ms" class="mt-6 font-display text-4xl leading-[1.05] font-bold sm:text-5xl lg:text-6xl">
@@ -39,12 +39,12 @@
                 </p>
 
                 <div data-reveal style="--reveal-delay: 240ms" class="mt-8 flex flex-wrap gap-3">
-                    <flux:button :href="route('register')" variant="primary" icon-trailing="arrow-right">{{ __('Open a demo account') }}</flux:button>
+                    <flux:button :href="route('register')" variant="primary" icon-trailing="arrow-right">{{ __('Create an account') }}</flux:button>
                     <a href="#plans" class="inline-flex h-10 items-center rounded-lg border border-white/20 px-4 text-sm font-medium text-white hover:bg-white/10">{{ __('See the plans') }}</a>
                 </div>
 
                 <p data-reveal style="--reveal-delay: 300ms" class="mt-5 text-xs text-zinc-400">
-                    {{ __('Returns are not guaranteed. Capital is at risk.') }}
+                    {{ __('Investing carries risk.') }}
                     <a href="{{ route('legal.risk') }}" class="underline hover:text-gold-200">{{ __('Read the risk disclosure') }}</a>
                 </p>
             </div>
@@ -78,8 +78,8 @@
 
                 <div data-reveal style="--reveal-delay: 450ms" class="mt-6 animate-float rounded-2xl border border-gold-300/20 bg-linear-to-br from-navy-800 to-navy-900 p-6 shadow-2xl shadow-black/40">
                     <div class="flex items-center justify-between text-sm">
-                        <span class="text-zinc-400">{{ __('Demo wallet') }}</span>
-                        <span class="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-medium text-gold-200">{{ __('Simulated') }}</span>
+                        <span class="text-zinc-400">{{ __('Your wallet') }}</span>
+                        <span class="rounded-full bg-gold-400/15 px-2 py-0.5 text-xs font-medium text-gold-200">{{ __('Example') }}</span>
                     </div>
                     <p class="mt-3 font-display text-3xl font-bold tabular-nums">0.2500 <span class="text-base text-zinc-400">BTC</span></p>
                     <svg viewBox="0 0 300 70" preserveAspectRatio="none" class="mt-4 h-16 w-full" aria-hidden="true">
@@ -105,7 +105,7 @@
         <div class="relative border-y border-white/10 bg-navy-900/80 py-3 text-sm text-zinc-300" aria-hidden="true">
             <div class="flex w-max animate-marquee gap-10 whitespace-nowrap">
                 @foreach (range(1, 2) as $copy)
-                    @foreach (['Demo platform, no real funds', 'Returns are not guaranteed', 'Withdrawals reviewed by an admin', 'Bitcoin address checksum validation', 'Two-step login available', 'Every balance change logged', 'Gold priced via PAX Gold', 'Amounts stored to the satoshi'] as $fact)
+                    @foreach (['Clear rates and terms', 'Earnings added every day', 'Withdrawals reviewed by an admin', 'Bitcoin address checksum validation', 'Two-step login available', 'Every balance change logged', 'Gold priced via PAX Gold', 'Amounts stored to the satoshi'] as $fact)
                         <span class="flex items-center gap-10"><span>{{ __($fact) }}</span><span class="text-gold-400">◆</span></span>
                     @endforeach
                 @endforeach
@@ -141,9 +141,9 @@
             <ol class="mt-14 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 @foreach ([
                     ['icon' => 'user-plus', 'title' => 'Create & verify', 'text' => 'Sign up, confirm your email, turn on two-step login and send your ID for review.'],
-                    ['icon' => 'qr-code', 'title' => 'Fund your demo wallet', 'text' => 'Record a simulated BTC deposit. An admin credits it after review.'],
-                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Compare Bitcoin and gold mining plans by term, minimum, risk level and indicative target.'],
-                    ['icon' => 'arrow-up-tray', 'title' => 'Withdraw to your wallet', 'text' => 'Request a withdrawal to your own BTC address. Each request is checked and approved by an admin.'],
+                    ['icon' => 'qr-code', 'title' => 'Fund your wallet', 'text' => 'Send BTC to our address and enter the transaction ID. We credit it once confirmed.'],
+                    ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Compare Bitcoin and gold mining plans by rate, term and minimum, and see your earnings before you invest.'],
+                    ['icon' => 'arrow-up-tray', 'title' => 'Withdraw to your wallet', 'text' => 'Request a withdrawal to your own BTC address. We check it and send your BTC.'],
                 ] as $step)
                     <li data-reveal style="--reveal-delay: {{ $loop->index * 100 }}ms" class="group relative rounded-2xl border border-zinc-200 bg-white p-6 transition hover:-translate-y-1 hover:border-gold-300 hover:shadow-xl hover:shadow-gold-500/10 dark:border-white/10 dark:bg-navy-900 dark:hover:border-gold-400/40">
                         <span class="absolute top-5 right-5 font-display text-4xl font-bold text-zinc-100 dark:text-white/5">0{{ $loop->iteration }}</span>
@@ -164,8 +164,14 @@
             <div data-reveal class="mx-auto max-w-2xl text-center">
                 <p class="text-sm font-semibold tracking-wide text-gold-600 uppercase dark:text-gold-300">{{ __('Plans') }}</p>
                 <h2 class="mt-2 font-display text-3xl font-bold text-navy-900 sm:text-4xl dark:text-white">{{ __('Bitcoin and gold mining plans') }}</h2>
-                <p class="mt-4">{{ __('Targets are indicative and used to simulate earnings in this demo. They are not promises. Real results can be lower, or a loss.') }}</p>
+                <p class="mt-4">{{ __('Pick a plan and an amount to see what you earn per day, your profit and the date you are paid.') }}</p>
             </div>
+
+            @if ($plans->isNotEmpty())
+                <div data-reveal class="mx-auto mt-10 max-w-4xl">
+                    <x-returns-calculator :plans="$plans" :btc-price-cents="$prices['btc_cents']" class="shadow-xl shadow-gold-500/5" />
+                </div>
+            @endif
 
             @foreach ([['Bitcoin mining', $btcPlans, '₿'], ['Gold mining', $goldPlans, 'Au']] as [$heading, $group, $symbol])
                 @if ($group->isNotEmpty())
@@ -188,8 +194,8 @@
                                         <dd class="mt-0.5 font-semibold text-navy-900 dark:text-white">{{ trans_choice(':count day|:count days', $plan->duration_days) }}</dd>
                                     </div>
                                     <div>
-                                        <dt class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Indicative target') }}</dt>
-                                        <dd class="mt-0.5 font-semibold text-navy-900 dark:text-white">{{ $plan->targetPercent() }}% <span class="font-normal text-zinc-500">{{ __('over term') }}</span></dd>
+                                        <dt class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Rate') }}</dt>
+                                        <dd class="mt-0.5 font-semibold text-navy-900 dark:text-white">{{ $plan->targetPercent() }}% <span class="text-xs font-normal text-zinc-500">({{ $plan->dailyPercent() }}% {{ __('a day') }})</span></dd>
                                     </div>
                                     <div>
                                         <dt class="text-xs text-zinc-500 dark:text-zinc-400">{{ __('Minimum') }}</dt>
@@ -201,10 +207,10 @@
                                     </div>
                                 </dl>
 
-                                <p class="mt-5 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:bg-white/5 dark:text-zinc-400">{{ __('Not guaranteed. Capital at risk. Principal is locked for the full term.') }}</p>
+                                <p class="mt-5 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:bg-white/5 dark:text-zinc-400">{{ __('Example: :amount BTC earns :profit BTC and pays back :total BTC after :days days.', ['amount' => Btc::format($plan->min_sats), 'profit' => Btc::format($plan->profitFor($plan->min_sats)), 'total' => Btc::format($plan->min_sats + $plan->profitFor($plan->min_sats)), 'days' => $plan->duration_days]) }}</p>
 
                                 <div class="mt-auto pt-5">
-                                    <flux:button :href="auth()->check() ? route('invest') : route('register')" variant="filled" class="w-full">{{ __('Try this plan in demo') }}</flux:button>
+                                    <flux:button :href="auth()->check() ? route('invest') : route('register')" variant="filled" class="w-full">{{ __('Invest in this plan') }}</flux:button>
                                 </div>
                             </article>
                         @endforeach
@@ -303,9 +309,9 @@
                 <div class="pointer-events-none absolute -top-24 -right-24 size-72 rounded-full bg-gold-400/25 blur-3xl" aria-hidden="true"></div>
                 <div class="relative grid gap-8 lg:grid-cols-2 lg:items-center">
                     <div>
-                        <h2 class="font-display text-3xl font-bold">{{ __('See the whole platform with zero risk') }}</h2>
-                        <p class="mt-3 text-zinc-300">{{ __('Open a free demo account to try deposits, plans and withdrawals with simulated balances.') }}</p>
-                        <div class="mt-6"><flux:button :href="route('register')" variant="primary" icon-trailing="arrow-right">{{ __('Open a demo account') }}</flux:button></div>
+                        <h2 class="font-display text-3xl font-bold">{{ __('Start growing your Bitcoin') }}</h2>
+                        <p class="mt-3 text-zinc-300">{{ __('Create a free account, verify your identity and choose the plan that suits you.') }}</p>
+                        <div class="mt-6"><flux:button :href="route('register')" variant="primary" icon-trailing="arrow-right">{{ __('Create an account') }}</flux:button></div>
                     </div>
                     <div class="rounded-2xl border border-white/10 bg-white/5 p-5 text-sm text-zinc-300">
                         <p class="flex items-center gap-2 font-semibold text-gold-200"><flux:icon.exclamation-triangle variant="mini" /> {{ __('Risk disclaimer') }}</p>

@@ -143,14 +143,14 @@ test('an admin publishes an announcement', function () {
 
 test('an admin saves site settings', function () {
     Livewire::actingAs(User::factory()->admin()->create())->test('pages::admin.settings')
-        ->set('siteName', 'AurumBit Demo')
+        ->set('siteName', 'AurumBit Capital')
         ->set('minWithdrawal', '0.0002')
         ->set('referralBonusPercent', '0.5')
         ->set('withdrawalRequiresKyc', false)
         ->call('save')
         ->assertHasNoErrors();
 
-    expect(Setting::get('site_name'))->toBe('AurumBit Demo')
+    expect(Setting::get('site_name'))->toBe('AurumBit Capital')
         ->and(Setting::integer('min_withdrawal_sats'))->toBe(20_000)
         ->and(Setting::integer('referral_bonus_bps'))->toBe(50)
         ->and(Setting::enabled('withdrawal_requires_kyc'))->toBeFalse();
@@ -162,4 +162,37 @@ test('the create admin command makes an admin login', function () {
 
     $admin = User::query()->where('email', 'owner@example.com')->sole();
     expect($admin->is_admin)->toBeTrue()->and($admin->hasVerifiedEmail())->toBeTrue();
+});
+
+test('approving a withdrawal needs the payment transaction ID, which the user can see', function () {
+    $admin = User::factory()->admin()->create();
+    $user = User::factory()->withBalance(500_000)->create();
+    Setting::put(['withdrawal_requires_kyc' => false]);
+    $withdrawal = app(WalletService::class)->requestWithdrawal($user, 200_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq');
+    $txid = str_repeat('f0', 32);
+
+    $component = Livewire::actingAs($admin)->test('pages::admin.withdrawals')
+        ->call('review', $withdrawal->id, 'approve')
+        ->call('confirm')
+        ->assertHasErrors('payoutTxid');
+
+    $component->set('payoutTxid', 'not-a-txid')->call('confirm')->assertHasErrors('payoutTxid');
+    $component->set('payoutTxid', $txid)->call('confirm')->assertHasNoErrors();
+
+    expect($withdrawal->fresh()->status)->toBe(RequestStatus::Approved)
+        ->and($withdrawal->fresh()->payout_txid)->toBe($txid)
+        ->and($user->fresh()->balance_sats)->toBe(300_000);
+
+    $this->actingAs($user)->get(route('withdraw'))->assertSee('https://mempool.space/tx/'.$txid, false);
+});
+
+test('the deposit address must be a valid Bitcoin address', function () {
+    $component = Livewire::actingAs(User::factory()->admin()->create())->test('pages::admin.settings')
+        ->set('depositAddress', 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdx')
+        ->call('save')
+        ->assertHasErrors('depositAddress');
+
+    $component->set('depositAddress', 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq')->call('save')->assertHasNoErrors();
+
+    expect(Setting::get('deposit_address'))->toBe('bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq');
 });

@@ -8,7 +8,6 @@
         <a href="#main" class="sr-only focus:not-sr-only focus:fixed focus:top-2 focus:left-2 focus:z-50 focus:rounded focus:bg-white focus:px-3 focus:py-2 focus:text-navy-900">{{ __('Skip to content') }}</a>
 
         <div class="sticky top-0 z-40">
-            <x-demo-banner />
 
             <header data-site-header class="border-b border-transparent bg-white/70 backdrop-blur-lg transition-colors data-scrolled:border-zinc-200 data-scrolled:bg-white/90 dark:bg-navy-950/60 dark:data-scrolled:border-white/10 dark:data-scrolled:bg-navy-950/90">
                 <nav class="mx-auto flex h-16 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6 lg:px-8" aria-label="{{ __('Main') }}">
@@ -29,7 +28,7 @@
                             <flux:button :href="route('dashboard')" variant="primary" size="sm" icon-trailing="arrow-right">{{ __('Dashboard') }}</flux:button>
                         @else
                             <span class="hidden sm:block"><flux:button :href="route('login')" variant="ghost" size="sm">{{ __('Log in') }}</flux:button></span>
-                            <flux:button :href="route('register')" variant="primary" size="sm"><span class="sm:hidden">{{ __('Sign up') }}</span><span class="hidden sm:inline">{{ __('Open demo account') }}</span></flux:button>
+                            <flux:button :href="route('register')" variant="primary" size="sm"><span class="sm:hidden">{{ __('Sign up') }}</span><span class="hidden sm:inline">{{ __('Create account') }}</span></flux:button>
                         @endauth
 
                         <details class="group relative md:hidden">
@@ -65,10 +64,6 @@
                             <span class="font-display text-lg font-bold text-navy-900 dark:text-white">{{ \App\Models\Setting::get('site_name') }}</span>
                         </a>
                         <p class="mt-3 max-w-md text-sm">{{ \App\Models\Setting::get('tagline') }}</p>
-                        <div class="mt-5 rounded-xl border border-gold-300/60 bg-gold-50 p-4 text-sm text-gold-900 dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-100">
-                            <p class="font-semibold">{{ __('Demo platform, no real funds') }}</p>
-                            <p class="mt-1">{{ __('This website is a demonstration. No Bitcoin is received, held or sent, and every balance, deposit, earning and withdrawal you see is simulated.') }}</p>
-                        </div>
                     </div>
 
                     <div>
@@ -93,7 +88,9 @@
 
                 <div class="mt-10 space-y-2 border-t border-zinc-200 pt-6 text-xs leading-relaxed text-zinc-500 dark:border-white/10 dark:text-zinc-400">
                     <p>{{ __('Risk warning: crypto-assets and commodity investments are high risk. Their value can go down as well as up and you may lose all the money you invest. Past performance and target returns are not a reliable indicator of future results. Returns are not guaranteed.') }}</p>
-                    <p>{{ \App\Models\Setting::get('company_details') }}</p>
+                    @if (filled(\App\Models\Setting::get('company_details')))
+                        <p>{{ \App\Models\Setting::get('company_details') }}</p>
+                    @endif
                     <p>&copy; {{ now()->year }} {{ \App\Models\Setting::get('site_name') }}.</p>
                 </div>
             </div>

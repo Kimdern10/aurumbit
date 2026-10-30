@@ -10,7 +10,7 @@ use Illuminate\Console\Attributes\Signature;
 use Illuminate\Console\Command;
 
 #[Signature('app:process-investments')]
-#[Description('Update simulated earnings of active investments and settle the ones that have finished (demo mode)')]
+#[Description('Update earnings of active investments and settle the ones that have finished')]
 class ProcessInvestments extends Command
 {
     /**

@@ -88,7 +88,7 @@ new #[Title('Dashboard')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Welcome back, :name', ['name' => Str::before(auth()->user()->name, ' ')]) }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Your simulated portfolio at a glance.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Your portfolio at a glance.') }}</flux:text>
         </div>
         <div class="flex gap-2">
             <flux:button :href="route('deposit')" icon="arrow-down-tray" wire:navigate>{{ __('Deposit') }}</flux:button>
@@ -116,13 +116,13 @@ new #[Title('Dashboard')] class extends Component {
     @endunless
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat-card :label="__('Available balance')" icon="wallet" :hint="$this->btcPriceCents ? '≈ '.Btc::usd(Btc::usdCents($this->totals['balance'], $this->btcPriceCents)) : __('Simulated')">
+        <x-stat-card :label="__('Available balance')" icon="wallet" :hint="$this->btcPriceCents ? '≈ '.Btc::usd(Btc::usdCents($this->totals['balance'], $this->btcPriceCents)) : null">
             <x-btc :sats="$this->totals['balance']" />
         </x-stat-card>
         <x-stat-card :label="__('In active plans')" icon="chart-pie" :hint="trans_choice(':count active plan|:count active plans', $this->activeInvestments->count())">
             <x-btc :sats="$this->totals['invested']" />
         </x-stat-card>
-        <x-stat-card :label="__('Simulated earnings')" icon="arrow-trending-up" :hint="__('Not guaranteed')">
+        <x-stat-card :label="__('Earnings')" icon="arrow-trending-up" :hint="__('Paid and accruing')">
             <x-btc :sats="$this->totals['earned']" />
         </x-stat-card>
         <x-stat-card :label="__('Pending withdrawals')" icon="arrow-up-tray" :hint="__('Waiting for admin review')">
@@ -174,7 +174,7 @@ new #[Title('Dashboard')] class extends Component {
                         <flux:progress class="mt-2" :value="$investment->progressPercent()" />
                         <div class="mt-1.5 flex justify-between text-xs text-zinc-500">
                             <span>{{ __('Ends :date', ['date' => $investment->ends_at->format('j M Y')]) }}</span>
-                            <span>{{ __('Simulated so far:') }} <x-btc :sats="$investment->earned_sats" /></span>
+                            <span>{{ __('Earned so far:') }} <x-btc :sats="$investment->earned_sats" /></span>
                         </div>
                     </div>
                 @empty
@@ -207,7 +207,7 @@ new #[Title('Dashboard')] class extends Component {
     <flux:card class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
             <flux:heading>{{ __('Your referral link') }}</flux:heading>
-            <flux:text class="mt-1 text-sm">{{ __('Share it with friends. Referral bonuses in this demo are simulated.') }}</flux:text>
+            <flux:text class="mt-1 text-sm">{{ __('Share it with friends and earn a bonus on their first deposit.') }}</flux:text>
         </div>
         <div class="flex min-w-0 items-center gap-2">
             <flux:input readonly :value="auth()->user()->referralLink()" class="min-w-0 sm:w-80" />

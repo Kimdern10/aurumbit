@@ -5,7 +5,7 @@
     <ul>
         <li><strong>Account details:</strong> your name, email address and a scrambled (hashed) password.</li>
         <li><strong>Identity documents</strong> you upload for verification: the document photo, a selfie and your full name.</li>
-        <li><strong>Activity in your account:</strong> simulated deposits, plans, withdrawals, the Bitcoin addresses you enter and the audit log of balance changes.</li>
+        <li><strong>Activity in your account:</strong> deposits and their transaction IDs, plans, withdrawals, the Bitcoin addresses you enter and the audit log of balance changes.</li>
         <li><strong>Security data:</strong> your IP address and browser, to keep your account and the website safe.</li>
     </ul>
 

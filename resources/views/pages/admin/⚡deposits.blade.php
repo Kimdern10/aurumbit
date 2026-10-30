@@ -44,7 +44,7 @@ new #[Title('Deposits')] class extends Component {
     {
         try {
             $wallet->approveDeposit(Deposit::query()->findOrFail($depositId), Auth::user());
-            Flux::toast(variant: 'success', text: __('Deposit credited (demo).'));
+            Flux::toast(variant: 'success', text: __('Deposit credited.'));
         } catch (WalletException $exception) {
             Flux::toast(variant: 'danger', text: $exception->getMessage());
         }
@@ -80,7 +80,7 @@ new #[Title('Deposits')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Deposits') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Demo mode: approving credits a simulated balance. No blockchain check is made.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Open each transaction on the blockchain and check the amount reached our address with enough confirmations before you approve.') }}</flux:text>
         </div>
         <flux:select wire:model.live="status" class="sm:max-w-48">
             <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
@@ -108,7 +108,13 @@ new #[Title('Deposits')] class extends Component {
                             <p class="text-xs text-zinc-500">{{ $deposit->user->email }}</p>
                         </flux:table.cell>
                         <flux:table.cell><x-btc :sats="$deposit->amount_sats" class="font-medium" /></flux:table.cell>
-                        <flux:table.cell class="max-w-40 truncate font-mono text-xs">{{ $deposit->reference ?: '—' }}</flux:table.cell>
+                        <flux:table.cell class="max-w-40 font-mono text-xs">
+                            @if ($deposit->reference)
+                                <a href="{{ \App\Models\Setting::get('explorer_tx_url').$deposit->reference }}" target="_blank" rel="noopener" class="block truncate underline" title="{{ $deposit->reference }}">{{ __('Check on blockchain') }}</a>
+                            @else
+                                —
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell class="whitespace-nowrap">{{ $deposit->created_at->format('j M, H:i') }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$deposit->status->color()">{{ $deposit->status->label() }}</flux:badge>
@@ -117,7 +123,7 @@ new #[Title('Deposits')] class extends Component {
                         <flux:table.cell align="end">
                             @if ($deposit->status === RequestStatus::Pending)
                                 <div class="flex justify-end gap-2">
-                                    <flux:button size="sm" variant="primary" wire:click="approve({{ $deposit->id }})" wire:confirm="{{ __('Credit this deposit to the user?') }}">{{ __('Approve') }}</flux:button>
+                                    <flux:button size="sm" variant="primary" wire:click="approve({{ $deposit->id }})" wire:confirm="{{ __('Have you checked this transaction on the blockchain? Credit it to the user?') }}">{{ __('Approve') }}</flux:button>
                                     <flux:button size="sm" variant="danger" wire:click="startReject({{ $deposit->id }})">{{ __('Reject') }}</flux:button>
                                 </div>
                             @endif

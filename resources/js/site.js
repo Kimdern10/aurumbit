@@ -227,6 +227,67 @@ function boot() {
     initPrices();
     initHeroCanvas();
     initHeader();
+    initCalculators();
+}
+
+/** BTC text → satoshis (BigInt), or null. Mirrors App\Support\Btc::toSats. */
+function toSats(text) {
+    const match = /^(\d{1,8})(?:\.(\d{1,8}))?$/.exec(String(text).trim());
+    if (!match) return null;
+    return BigInt(match[1]) * 100000000n + BigInt((match[2] || '').padEnd(8, '0'));
+}
+
+/** Satoshis (BigInt) → BTC text with trailing zeros trimmed. */
+function formatBtc(sats) {
+    const whole = sats / 100000000n;
+    const fraction = (sats % 100000000n).toString().padStart(8, '0').replace(/0+$/, '');
+    return `${whole.toLocaleString('en-US')}${fraction ? '.' + fraction : ''} BTC`;
+}
+
+/** Returns calculators: <div data-calculator data-plans='[...]'>. */
+function initCalculators() {
+    document.querySelectorAll('[data-calculator]:not([data-calc-ready])').forEach((root) => {
+        root.dataset.calcReady = '1';
+        const plans = JSON.parse(root.dataset.plans || '[]');
+        const btcPriceCents = parseInt(root.dataset.btcPrice || '0', 10);
+        const select = root.querySelector('[data-calc-plan]');
+        const input = root.querySelector('[data-calc-amount]');
+        const out = (key, text, sub = '') => {
+            root.querySelector(`[data-calc-${key}]`).textContent = text;
+            root.querySelector(`[data-calc-${key}-sub]`).textContent = sub;
+        };
+        const usdFor = (sats) => (btcPriceCents ? '≈ ' + usd.format(Number((sats * BigInt(btcPriceCents)) / 100000000n) / 100) : '');
+
+        const update = () => {
+            const plan = plans.find((p) => String(p.id) === select.value) || plans[0];
+            const sats = toSats(input.value);
+            root.querySelector('[data-calc-limits]').textContent = `Min ${plan.min} BTC${plan.max ? ` · Max ${plan.max} BTC` : ''}`;
+            out('rate', `${plan.rate}%`, `${plan.daily}% a day for ${plan.days} days`);
+
+            if (sats === null || sats <= 0n) {
+                ['daily', 'profit', 'total'].forEach((key) => out(key, '—'));
+                root.querySelector('[data-calc-summary]').textContent = 'Enter an amount in BTC, e.g. 0.05';
+                return;
+            }
+
+            const profit = (sats * BigInt(plan.bps)) / 10000n;
+            const daily = profit / BigInt(plan.days);
+            const total = sats + profit;
+            const ends = new Date(Date.now() + plan.days * 86400000).toLocaleDateString(undefined, { day: 'numeric', month: 'short', year: 'numeric' });
+            const outside = sats < BigInt(plan.minSats) || (plan.maxSats && sats > BigInt(plan.maxSats));
+
+            out('daily', formatBtc(daily), usdFor(daily));
+            out('profit', '+' + formatBtc(profit), usdFor(profit));
+            out('total', formatBtc(total), usdFor(total));
+            root.querySelector('[data-calc-summary]').textContent = outside
+                ? `This amount is outside the ${plan.name} limits.`
+                : `Invest ${formatBtc(sats)} in ${plan.name} today and receive ${formatBtc(total)} on ${ends} (after ${plan.days} days).`;
+        };
+
+        select.addEventListener('change', update);
+        input.addEventListener('input', update);
+        update();
+    });
 }
 
 document.addEventListener('DOMContentLoaded', boot);

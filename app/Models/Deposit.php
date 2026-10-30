@@ -11,7 +11,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * A simulated deposit. No coins are received; the admin credits it in demo mode.
+ * A deposit the user says they sent. The admin checks the transaction on the
+ * blockchain before crediting it.
  *
  * @property int $id
  * @property int $user_id

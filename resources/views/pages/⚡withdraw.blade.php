@@ -109,7 +109,7 @@ new #[Title('Withdraw')] class extends Component {
             <ol class="list-decimal space-y-2 pl-5 text-zinc-600 dark:text-zinc-300">
                 <li>{{ __('The amount is held from your balance straight away.') }}</li>
                 <li>{{ __('An admin reviews the request.') }}</li>
-                <li>{{ __('If approved, it is marked as paid. In this demo nothing is sent on-chain.') }}</li>
+                <li>{{ __('If approved, we send the BTC to your address and show you the transaction ID.') }}</li>
                 <li>{{ __('If rejected, the full amount returns to your balance.') }}</li>
             </ol>
         </flux:card>
@@ -132,6 +132,9 @@ new #[Title('Withdraw')] class extends Component {
                         <flux:table.cell class="font-mono text-xs">{{ Str::limit($withdrawal->btc_address, 14, '…') }}{{ substr($withdrawal->btc_address, -6) }}</flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$withdrawal->status->color()">{{ $withdrawal->status->label() }}</flux:badge>
+                            @if ($withdrawal->payout_txid)
+                                <a href="{{ Setting::get('explorer_tx_url').$withdrawal->payout_txid }}" target="_blank" rel="noopener" class="mt-1 block text-xs underline">{{ __('View payment') }}</a>
+                            @endif
                             @if ($withdrawal->admin_note)
                                 <p class="mt-1 max-w-56 truncate text-xs text-zinc-500">{{ $withdrawal->admin_note }}</p>
                             @endif

@@ -24,7 +24,7 @@ enum LedgerType: string
             self::WithdrawalRefund => 'Withdrawal returned',
             self::Investment => 'Investment',
             self::InvestmentReturn => 'Principal returned',
-            self::Earning => 'Simulated earnings',
+            self::Earning => 'Earnings',
             self::ReferralBonus => 'Referral bonus',
             self::Adjustment => 'Admin adjustment',
         };

@@ -13,8 +13,8 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * An admin-defined investment plan. The target return is indicative only and
- * is used to simulate earnings in demo mode; it is never a promise.
+ * An admin-defined investment plan. The return rate covers the whole term and is
+ * spread evenly over its days to work out earnings.
  *
  * @property int $id
  * @property string $name
@@ -80,6 +80,22 @@ class Plan extends Model
     public function targetPercent(): string
     {
         return rtrim(rtrim(number_format($this->target_return_bps / 100, 2, '.', ''), '0'), '.');
+    }
+
+    /**
+     * The rate per day, e.g. "0.12" for 3.5% over 30 days. For display only.
+     */
+    public function dailyPercent(): string
+    {
+        return rtrim(rtrim(number_format($this->target_return_bps / 100 / max(1, $this->duration_days), 3, '.', ''), '0'), '.');
+    }
+
+    /**
+     * Profit on an amount at the end of the term, in whole satoshis (rounded down).
+     */
+    public function profitFor(int $sats): int
+    {
+        return intdiv($sats * $this->target_return_bps, 10000);
     }
 
     public function riskLabel(): string

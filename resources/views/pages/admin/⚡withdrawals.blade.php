@@ -25,6 +25,8 @@ new #[Title('Withdrawals')] class extends Component {
 
     public string $note = '';
 
+    public string $payoutTxid = '';
+
     public function updatedStatus(): void
     {
         $this->resetPage();
@@ -47,13 +49,21 @@ new #[Title('Withdrawals')] class extends Component {
         $this->reviewingId = $withdrawalId;
         $this->decision = $decision === 'reject' ? 'reject' : 'approve';
         $this->note = '';
+        $this->payoutTxid = '';
         $this->resetValidation();
         Flux::modal('review-withdrawal')->show();
     }
 
     public function confirm(WalletService $wallet): void
     {
-        $this->validate(['note' => [$this->decision === 'reject' ? 'required' : 'nullable', 'string', 'max:500']]);
+        $this->payoutTxid = strtolower(trim($this->payoutTxid));
+
+        $this->validate([
+            'note' => [$this->decision === 'reject' ? 'required' : 'nullable', 'string', 'max:500'],
+            'payoutTxid' => [$this->decision === 'approve' ? 'required' : 'nullable', 'regex:/^[0-9a-f]{64}$/'],
+        ], [
+            'payoutTxid.regex' => __('Paste the 64-character transaction ID of the payment.'),
+        ]);
 
         $withdrawal = Withdrawal::query()->findOrFail($this->reviewingId);
 
@@ -62,8 +72,8 @@ new #[Title('Withdrawals')] class extends Component {
                 $wallet->rejectWithdrawal($withdrawal, Auth::user(), $this->note);
                 Flux::toast(text: __('Withdrawal rejected and the amount returned.'));
             } else {
-                $wallet->approveWithdrawal($withdrawal, Auth::user(), $this->note ?: null);
-                Flux::toast(variant: 'success', text: __('Withdrawal marked as paid (demo, nothing sent).'));
+                $wallet->approveWithdrawal($withdrawal, Auth::user(), $this->payoutTxid, $this->note ?: null);
+                Flux::toast(variant: 'success', text: __('Withdrawal marked as paid.'));
             }
         } catch (WalletException $exception) {
             Flux::toast(variant: 'danger', text: $exception->getMessage());
@@ -79,7 +89,7 @@ new #[Title('Withdrawals')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Withdrawals') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Demo mode: approving marks the request as paid. No coins are sent.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Send the BTC from the company wallet first, then approve and paste the transaction ID. The site never sends coins by itself.') }}</flux:text>
         </div>
         <flux:select wire:model.live="status" class="sm:max-w-48">
             <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
@@ -109,6 +119,11 @@ new #[Title('Withdrawals')] class extends Component {
                         <flux:table.cell><x-btc :sats="$withdrawal->amount_sats" class="font-medium" /></flux:table.cell>
                         <flux:table.cell class="max-w-56">
                             <span class="block truncate font-mono text-xs" title="{{ $withdrawal->btc_address }}">{{ $withdrawal->btc_address }}</span>
+                            @if ($withdrawal->status === RequestStatus::Pending)
+                                <button type="button" data-copy="{{ $withdrawal->btc_address }}" class="text-xs underline"><span data-copy-label>{{ __('Copy address') }}</span></button>
+                            @elseif ($withdrawal->payout_txid)
+                                <a href="{{ \App\Models\Setting::get('explorer_tx_url').$withdrawal->payout_txid }}" target="_blank" rel="noopener" class="text-xs underline">{{ __('View payment') }}</a>
+                            @endif
                         </flux:table.cell>
                         <flux:table.cell class="whitespace-nowrap">{{ $withdrawal->created_at->format('j M, H:i') }}</flux:table.cell>
                         <flux:table.cell>
@@ -137,7 +152,8 @@ new #[Title('Withdrawals')] class extends Component {
             @if ($decision === 'reject')
                 <flux:text class="text-sm">{{ __('The full amount goes back to the user\'s balance.') }}</flux:text>
             @else
-                <flux:text class="text-sm">{{ __('Demo mode: the request is marked as paid. Nothing is sent on the blockchain.') }}</flux:text>
+                <flux:text class="text-sm">{{ __('First send the exact amount to the user\'s address from the company wallet. Then paste the transaction ID here.') }}</flux:text>
+                <flux:input wire:model="payoutTxid" :label="__('Payment transaction ID')" class="font-mono" autocomplete="off" spellcheck="false" />
             @endif
             <flux:textarea wire:model="note" :label="$decision === 'reject' ? __('Reason (the user will see this)') : __('Note (optional)')" rows="3" />
             <div class="flex justify-end gap-2">

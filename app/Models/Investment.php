@@ -91,10 +91,10 @@ class Investment extends Model
     }
 
     /**
-     * Simulated earnings for the days elapsed: the indicative target spread evenly
+     * Earnings for the days elapsed: the plan rate spread evenly
      * over the term, rounded down to whole satoshis. Integer maths only.
      */
-    public function simulatedEarningsAt(?CarbonInterface $at = null): int
+    public function earningsAt(?CarbonInterface $at = null): int
     {
         return intdiv($this->amount_sats * $this->target_return_bps * $this->elapsedDays($at), 10000 * $this->duration_days);
     }

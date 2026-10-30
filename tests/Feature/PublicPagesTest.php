@@ -14,9 +14,11 @@ test('the home page lists active plans with risk wording and never waits on the 
         ->assertOk()
         ->assertSee('Hashrate Core')
         ->assertDontSee('Closed Plan')
-        ->assertSee('Demo platform, no real funds')
-        ->assertSee('Returns are not guaranteed')
-        ->assertDontSee('guaranteed profit');
+        ->assertSee('How much will I earn?', false)
+        ->assertSee('data-calculator', false)
+        ->assertSee('Risk warning')
+        ->assertDontSee('Demo')
+        ->assertDontSee('simulated');
 });
 
 test('legal pages are public', function (string $route, string $heading) {

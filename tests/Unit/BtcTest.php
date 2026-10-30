@@ -46,7 +46,7 @@ test('mistyped, testnet and fake addresses are rejected', function (string $addr
     'mixed case' => 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5MDQ',
     'testnet' => 'tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx',
     'taproot with old checksum' => 'bc1pw508d6qejxtdg4y5r3zarvary0c5xw7kw508d6qejxtdg4y5r3zarvary0c5xw7k7grplx',
-    'demo address' => 'bc1q-demo-address-do-not-send-funds',
+    'made-up address' => 'bc1q-not-a-real-address',
     'ethereum' => '0x52908400098527886E0F7030069857D2E4169EE7',
     'empty' => '',
 ]);

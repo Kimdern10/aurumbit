@@ -37,7 +37,7 @@ new #[Title('Investments')] class extends Component {
     }
 
     /**
-     * Pay out now: principal plus simulated earnings so far (or to the end if finished).
+     * Pay out now: principal plus earnings so far (or to the end if finished).
      */
     public function settle(int $investmentId, WalletService $wallet): void
     {
@@ -86,7 +86,7 @@ new #[Title('Investments')] class extends Component {
                 <flux:table.column>{{ __('User / plan') }}</flux:table.column>
                 <flux:table.column>{{ __('Amount') }}</flux:table.column>
                 <flux:table.column>{{ __('Term') }}</flux:table.column>
-                <flux:table.column>{{ __('Simulated earnings') }}</flux:table.column>
+                <flux:table.column>{{ __('Earnings') }}</flux:table.column>
                 <flux:table.column>{{ __('Status') }}</flux:table.column>
                 <flux:table.column></flux:table.column>
             </flux:table.columns>
@@ -104,7 +104,7 @@ new #[Title('Investments')] class extends Component {
                         <flux:table.cell align="end">
                             @if ($investment->status === InvestmentStatus::Active)
                                 <div class="flex justify-end gap-2">
-                                    <flux:button size="sm" wire:click="settle({{ $investment->id }})" wire:confirm="{{ __('Pay out the principal and simulated earnings so far?') }}">{{ __('Settle') }}</flux:button>
+                                    <flux:button size="sm" wire:click="settle({{ $investment->id }})" wire:confirm="{{ __('Pay out the principal and earnings so far?') }}">{{ __('Settle') }}</flux:button>
                                     <flux:button size="sm" variant="danger" wire:click="cancel({{ $investment->id }})" wire:confirm="{{ __('Cancel and return only the principal?') }}">{{ __('Cancel') }}</flux:button>
                                 </div>
                             @endif

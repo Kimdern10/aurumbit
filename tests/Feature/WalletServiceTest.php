@@ -140,7 +140,7 @@ test('approving a withdrawal keeps the amount deducted', function () {
     $user = verifiedUser(1_000_000);
     $withdrawal = $this->wallet->requestWithdrawal($user, 400_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq');
 
-    $this->wallet->approveWithdrawal($withdrawal, $this->admin);
+    $this->wallet->approveWithdrawal($withdrawal, $this->admin, str_repeat('ab', 32));
 
     expect($user->fresh()->balance_sats)->toBe(600_000)
         ->and($withdrawal->fresh()->status)->toBe(RequestStatus::Approved)
@@ -174,7 +174,7 @@ test('investments outside the plan limits, above the balance or in closed plans 
     'closed plan' => [2_000_000, 10_000_000, false],
 ]);
 
-test('simulated earnings accrue by whole days and never pass the target', function () {
+test('earnings accrue by whole days and never pass the plan rate', function () {
     $investment = Investment::factory()->create([
         'amount_sats' => 1_000_000,
         'target_return_bps' => 300,
@@ -187,10 +187,10 @@ test('simulated earnings accrue by whole days and never pass the target', functi
     $this->wallet->accrue($investment);
 
     expect($investment->fresh()->earned_sats)->toBe(10_000)
-        ->and($investment->simulatedEarningsAt(now()->addYear()))->toBe(30_000);
+        ->and($investment->earningsAt(now()->addYear()))->toBe(30_000);
 });
 
-test('settling a finished investment returns principal plus simulated earnings', function () {
+test('settling a finished investment returns principal plus earnings', function () {
     $user = User::factory()->withBalance(0)->create();
     $investment = Investment::factory()->for($user)->create([
         'amount_sats' => 1_000_000,
@@ -253,4 +253,13 @@ test('the process command accrues active and settles finished investments', func
 
 test('the deposit model starts as pending', function () {
     expect(Deposit::factory()->create()->fresh()->status)->toBe(RequestStatus::Pending);
+});
+
+test('plans show their daily rate and exact profit', function () {
+    $plan = Plan::factory()->make(['target_return_bps' => 350, 'duration_days' => 30]);
+
+    expect($plan->targetPercent())->toBe('3.5')
+        ->and($plan->dailyPercent())->toBe('0.117')
+        ->and($plan->profitFor(10_000_000))->toBe(350_000)
+        ->and($plan->profitFor(1))->toBe(0);
 });

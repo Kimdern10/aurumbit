@@ -12,12 +12,14 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
  * A withdrawal request. The amount is held from the balance when requested and
- * returned if the admin rejects it. In demo mode nothing is sent on-chain.
+ * returned if the admin rejects it. The admin pays it from the company wallet
+ * and records the transaction ID.
  *
  * @property int $id
  * @property int $user_id
  * @property int $amount_sats
  * @property string $btc_address
+ * @property string|null $payout_txid
  * @property RequestStatus $status
  * @property string|null $admin_note
  * @property int|null $reviewed_by

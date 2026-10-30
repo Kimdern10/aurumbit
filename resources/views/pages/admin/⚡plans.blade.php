@@ -132,7 +132,7 @@ new #[Title('Plans')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Plans') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Changes apply to new investments only. Avoid wording that promises profits.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Changes apply to new investments only. Running investments keep the rate they started with.') }}</flux:text>
         </div>
         <flux:button wire:click="create" variant="primary" icon="plus">{{ __('New plan') }}</flux:button>
     </div>
@@ -180,12 +180,12 @@ new #[Title('Plans')] class extends Component {
                     @endforeach
                 </flux:select>
             </div>
-            <flux:textarea wire:model="summary" :label="__('Summary')" rows="3" :description="__('Describe what the plan is. Do not promise profits.')" />
+            <flux:textarea wire:model="summary" :label="__('Summary')" rows="3" :description="__('Describe what the plan invests in.')" />
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:input wire:model="minBtc" :label="__('Minimum (BTC)')" inputmode="decimal" />
                 <flux:input wire:model="maxBtc" :label="__('Maximum (BTC)')" inputmode="decimal" :placeholder="__('No limit')" />
                 <flux:input wire:model="durationDays" type="number" min="1" :label="__('Term (days)')" />
-                <flux:input wire:model="targetPercent" :label="__('Indicative target over term (%)')" inputmode="decimal" :description="__('Used only to simulate earnings.')" />
+                <flux:input wire:model="targetPercent" :label="__('Rate for the whole term (%)')" inputmode="decimal" :description="__('e.g. 3.5 means 3.5% profit after the full term, spread evenly per day.')" />
                 <flux:select wire:model="riskLevel" :label="__('Risk level')">
                     @foreach (Plan::RISK_LEVELS as $value => $label)
                         <flux:select.option :value="$value">{{ $label }}</flux:select.option>

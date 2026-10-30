@@ -21,7 +21,8 @@ use Illuminate\Support\Facades\DB;
  * The only place balances change. Every change runs in a database transaction
  * with the user's row locked, and writes a ledger entry (the audit log).
  *
- * DEMO MODE: no coins are received, held or sent. Amounts are simulated.
+ * The site never holds private keys: the admin checks deposits on the
+ * blockchain before crediting them and pays withdrawals from the company wallet.
  */
 class WalletService
 {
@@ -47,7 +48,7 @@ class WalletService
             $deposit = $this->lockPendingDeposit($deposit->id);
             $user = $this->lockUser($deposit->user_id);
 
-            $this->apply($user, $deposit->amount_sats, LedgerType::Deposit, 'Deposit #'.$deposit->id.' credited (demo)', $deposit, $admin);
+            $this->apply($user, $deposit->amount_sats, LedgerType::Deposit, 'Deposit #'.$deposit->id.' credited', $deposit, $admin);
             $this->markReviewed($deposit, RequestStatus::Approved, $admin);
 
             $this->payReferralBonus($user, $deposit, $admin);
@@ -90,12 +91,19 @@ class WalletService
     }
 
     /**
-     * Mark the withdrawal as paid. In demo mode nothing is sent on-chain.
+     * Mark the withdrawal as paid, after the admin has sent the coins from the
+     * company wallet, and record the blockchain transaction ID.
      */
-    public function approveWithdrawal(Withdrawal $withdrawal, User $admin, ?string $note = null): void
+    public function approveWithdrawal(Withdrawal $withdrawal, User $admin, string $payoutTxid, ?string $note = null): void
     {
-        DB::transaction(function () use ($withdrawal, $admin, $note): void {
-            $this->markReviewed($this->lockPendingWithdrawal($withdrawal->id), RequestStatus::Approved, $admin, $note);
+        if (preg_match('/^[0-9a-fA-F]{64}$/', $payoutTxid) !== 1) {
+            throw new WalletException('Enter the 64-character transaction ID of the payment.');
+        }
+
+        DB::transaction(function () use ($withdrawal, $admin, $payoutTxid, $note): void {
+            $locked = $this->lockPendingWithdrawal($withdrawal->id);
+            $locked->forceFill(['payout_txid' => strtolower($payoutTxid)]);
+            $this->markReviewed($locked, RequestStatus::Approved, $admin, $note);
         });
     }
 
@@ -151,7 +159,7 @@ class WalletService
     }
 
     /**
-     * Update the simulated earnings of an active investment for the days passed.
+     * Update the earnings of an active investment for the days passed.
      * Safe to run many times: it sets the figure rather than adding to it.
      */
     public function accrue(Investment $investment): void
@@ -160,14 +168,14 @@ class WalletService
             $locked = Investment::query()->whereKey($investment->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === InvestmentStatus::Active) {
-                $locked->earned_sats = max($locked->earned_sats, $locked->simulatedEarningsAt());
+                $locked->earned_sats = max($locked->earned_sats, $locked->earningsAt());
                 $locked->save();
             }
         });
     }
 
     /**
-     * Close a finished investment: return the principal and pay the simulated earnings.
+     * Close a finished investment: return the principal and pay the earnings.
      */
     public function settle(Investment $investment, ?User $admin = null): void
     {
@@ -183,12 +191,12 @@ class WalletService
             }
 
             $user = $this->lockUser($locked->user_id);
-            $earned = max($locked->earned_sats, $locked->simulatedEarningsAt($locked->ends_at->isPast() ? $locked->ends_at : now()));
+            $earned = max($locked->earned_sats, $locked->earningsAt($locked->ends_at->isPast() ? $locked->ends_at : now()));
 
             $this->apply($user, $locked->amount_sats, LedgerType::InvestmentReturn, $locked->plan->name.' principal returned', $locked, $admin);
 
             if ($earned > 0) {
-                $this->apply($user, $earned, LedgerType::Earning, $locked->plan->name.' simulated earnings', $locked, $admin);
+                $this->apply($user, $earned, LedgerType::Earning, $locked->plan->name.' earnings', $locked, $admin);
             }
 
             $locked->forceFill(['earned_sats' => $earned, 'status' => InvestmentStatus::Completed, 'settled_at' => now()])->save();
@@ -252,7 +260,7 @@ class WalletService
 
         $referrer = $this->lockUser($user->referred_by_id);
 
-        $this->apply($referrer, $bonus, LedgerType::ReferralBonus, 'Referral bonus for '.$user->name.' (demo)', $deposit, $admin);
+        $this->apply($referrer, $bonus, LedgerType::ReferralBonus, 'Referral bonus for '.$user->name, $deposit, $admin);
     }
 
     /**

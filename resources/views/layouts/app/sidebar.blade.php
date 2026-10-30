@@ -41,11 +41,6 @@
 
             <flux:spacer />
 
-            <div class="rounded-lg border border-gold-300/60 bg-gold-50 p-3 text-xs text-gold-900 in-data-flux-sidebar-collapsed-desktop:hidden dark:border-gold-400/30 dark:bg-gold-400/10 dark:text-gold-100">
-                <p class="font-semibold">{{ __('Demo platform') }}</p>
-                <p class="mt-0.5">{{ __('No real funds. Everything here is simulated.') }}</p>
-            </div>
-
             <x-desktop-user-menu class="hidden lg:block" :name="auth()->user()->name" />
         </flux:sidebar>
 
@@ -105,7 +100,6 @@
         </flux:header>
 
         <flux:main class="!p-0">
-            <x-demo-banner class="sticky top-0 z-10" />
             <div class="p-4 sm:p-6 lg:p-8">
                 {{ $slot }}
             </div>

@@ -29,13 +29,14 @@ class Setting extends Model
         'site_name' => 'AurumBit',
         'tagline' => 'Bitcoin and gold mining plans, explained clearly.',
         'support_email' => 'support@aurumbit.test',
-        'seo_description' => 'AurumBit is a demo platform for Bitcoin and gold mining investment plans with clear terms, risk disclosures and a full audit trail. No real funds.',
-        'demo_deposit_address' => 'bc1q-demo-address-do-not-send-funds',
+        'seo_description' => 'AurumBit offers Bitcoin and gold mining investment plans with clear rates, terms, risk disclosures and a full audit trail of every balance change.',
+        'deposit_address' => '',
+        'explorer_tx_url' => 'https://mempool.space/tx/',
         'min_deposit_sats' => '100000',
         'min_withdrawal_sats' => '50000',
         'withdrawal_requires_kyc' => '1',
         'referral_bonus_bps' => '100',
-        'company_details' => 'AurumBit (demo). Company registration and licence details will be shown here.',
+        'company_details' => '',
     ];
 
     private const string CACHE_KEY = 'site-settings';

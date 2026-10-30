@@ -68,7 +68,7 @@
                         <a href="{{ route('legal.terms') }}" target="_blank" class="font-medium underline">{{ __('terms') }}</a>
                         {{ __('and') }}
                         <a href="{{ route('legal.risk') }}" target="_blank" class="font-medium underline">{{ __('risk disclosure') }}</a>,
-                        {{ __('and I understand this is a demo with no real funds.') }}
+                        {{ __('and I understand my capital is at risk.') }}
                     </span>
                 </flux:label>
                 <flux:error name="terms" />

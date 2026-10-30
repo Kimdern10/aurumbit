@@ -66,7 +66,7 @@ new #[Title('Plans')] class extends Component {
         }
 
         $this->showModal = false;
-        Flux::toast(variant: 'success', text: __('You joined :plan (demo).', ['plan' => $plan->name]));
+        Flux::toast(variant: 'success', text: __('You joined :plan.', ['plan' => $plan->name]));
         $this->redirectRoute('investments', navigate: true);
     }
 };
@@ -79,8 +79,15 @@ new #[Title('Plans')] class extends Component {
     </div>
 
     <flux:callout color="amber" icon="exclamation-triangle">
-        <flux:callout.text>{{ __('Targets are indicative and used to simulate earnings in this demo. Returns are not guaranteed and your capital is at risk. Money in a plan is locked until the end of its term.') }}</flux:callout.text>
+        <flux:callout.text>{{ __('Earnings build up every day at the plan rate and are paid with your capital at the end of the term. Money in a plan is locked until then. Investing carries risk.') }}</flux:callout.text>
     </flux:callout>
+
+    @if ($this->plans->isNotEmpty())
+        <div>
+            <flux:heading>{{ __('How much will I earn?') }}</flux:heading>
+            <x-returns-calculator class="mt-3" :plans="$this->plans" :btc-price-cents="app(\App\Services\MarketPrices::class)->cached()['btc_cents']" />
+        </div>
+    @endif
 
     <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
         @forelse ($this->plans as $plan)
@@ -95,12 +102,12 @@ new #[Title('Plans')] class extends Component {
                 <flux:text class="mt-2 text-sm">{{ $plan->summary }}</flux:text>
                 <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div><dt class="text-xs text-zinc-500">{{ __('Term') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">{{ trans_choice(':count day|:count days', $plan->duration_days) }}</dd></div>
-                    <div><dt class="text-xs text-zinc-500">{{ __('Indicative target') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">{{ $plan->targetPercent() }}% {{ __('over term') }}</dd></div>
+                    <div><dt class="text-xs text-zinc-500">{{ __('Rate') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">{{ $plan->targetPercent() }}% <span class="text-xs font-normal text-zinc-500">({{ $plan->dailyPercent() }}% {{ __('a day') }})</span></dd></div>
                     <div><dt class="text-xs text-zinc-500">{{ __('Minimum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white"><x-btc :sats="$plan->min_sats" /></dd></div>
                     <div><dt class="text-xs text-zinc-500">{{ __('Maximum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">@if ($plan->max_sats)<x-btc :sats="$plan->max_sats" />@else{{ __('No limit') }}@endif</dd></div>
                 </dl>
                 <div class="mt-auto pt-5">
-                    <flux:button wire:click="choose({{ $plan->id }})" variant="primary" class="w-full">{{ __('Invest (demo)') }}</flux:button>
+                    <flux:button wire:click="choose({{ $plan->id }})" variant="primary" class="w-full">{{ __('Invest') }}</flux:button>
                 </div>
             </flux:card>
         @empty
@@ -124,15 +131,18 @@ new #[Title('Plans')] class extends Component {
                     :description="__('Between :min and :max BTC. Available: :balance BTC', ['min' => Btc::format($plan->min_sats), 'max' => $plan->max_sats ? Btc::format($plan->max_sats) : '∞', 'balance' => Btc::format(auth()->user()->balance_sats)])" />
 
                 @if ($sats)
-                    <div class="rounded-lg bg-zinc-50 p-3 text-sm dark:bg-white/5">
-                        <div class="flex justify-between"><span>{{ __('If the target were reached') }}</span><x-btc :sats="intdiv($sats * $plan->target_return_bps, 10000)" signed class="font-medium" /></div>
-                        <p class="mt-1 text-xs text-zinc-500">{{ __('Illustration only, not a promise. The real result could be lower or a loss.') }}</p>
-                    </div>
+                    @php($profit = $plan->profitFor($sats))
+                    <dl class="space-y-1.5 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-white/5">
+                        <div class="flex justify-between"><dt>{{ __('Rate') }}</dt><dd>{{ $plan->targetPercent() }}% {{ __('for :days days', ['days' => $plan->duration_days]) }}</dd></div>
+                        <div class="flex justify-between"><dt>{{ __('Earned per day') }}</dt><dd><x-btc :sats="intdiv($profit, $plan->duration_days)" /></dd></div>
+                        <div class="flex justify-between"><dt>{{ __('Profit at the end') }}</dt><dd><x-btc :sats="$profit" signed class="text-green-600 dark:text-green-400" /></dd></div>
+                        <div class="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold text-zinc-900 dark:border-white/10 dark:text-white"><dt>{{ __('You receive on :date', ['date' => now()->addDays($plan->duration_days)->format('j M Y')]) }}</dt><dd><x-btc :sats="$sats + $profit" /></dd></div>
+                    </dl>
                 @endif
 
                 <flux:field variant="inline">
                     <flux:checkbox wire:model="acceptRisk" />
-                    <flux:label class="text-sm leading-snug">{{ __('I understand returns are not guaranteed, my money is locked for the term, and this is a demo.') }}</flux:label>
+                    <flux:label class="text-sm leading-snug">{{ __('I understand my money is locked until the end of the term and that investing carries risk.') }}</flux:label>
                     <flux:error name="acceptRisk" />
                 </flux:field>
 
