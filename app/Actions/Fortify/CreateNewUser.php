@@ -22,12 +22,24 @@ class CreateNewUser implements CreatesNewUsers
         Validator::make($input, [
             ...$this->profileRules(),
             'password' => $this->passwordRules(),
+            'terms' => ['accepted'],
+            'ref' => ['nullable', 'string', 'max:16'],
+        ], [
+            'terms.accepted' => 'Please confirm you have read the terms and the risk disclosure.',
         ])->validate();
 
-        return User::create([
+        $user = new User([
             'name' => $input['name'],
             'email' => $input['email'],
             'password' => $input['password'],
         ]);
+
+        if (filled($input['ref'] ?? null)) {
+            $user->referred_by_id = User::query()->where('referral_code', strtoupper($input['ref']))->value('id');
+        }
+
+        $user->save();
+
+        return $user;
     }
 }

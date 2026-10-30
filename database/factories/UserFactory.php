@@ -57,4 +57,22 @@ class UserFactory extends Factory
             'two_factor_confirmed_at' => now(),
         ]);
     }
+
+    public function admin(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_admin' => true]);
+    }
+
+    public function suspended(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_suspended' => true]);
+    }
+
+    /**
+     * Start the user with a (simulated) balance in satoshis.
+     */
+    public function withBalance(int $sats): static
+    {
+        return $this->state(fn (array $attributes) => ['balance_sats' => $sats]);
+    }
 }

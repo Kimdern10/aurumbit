@@ -1,8 +1,13 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 42" {{ $attributes }}>
-    <path 
-        fill="currentColor" 
-        fill-rule="evenodd" 
-        clip-rule="evenodd"
-        d="M17.2 5.633 8.6.855 0 5.633v26.51l16.2 9 16.2-9v-8.442l7.6-4.223V9.856l-8.6-4.777-8.6 4.777V18.3l-5.6 3.111V5.633ZM38 18.301l-5.6 3.11v-6.157l5.6-3.11V18.3Zm-1.06-7.856-5.54 3.078-5.54-3.079 5.54-3.078 5.54 3.079ZM24.8 18.3v-6.157l5.6 3.111v6.158L24.8 18.3Zm-1 1.732 5.54 3.078-13.14 7.302-5.54-3.078 13.14-7.3v-.002Zm-16.2 7.89 7.6 4.222V38.3L2 30.966V7.92l5.6 3.111v16.892ZM8.6 9.3 3.06 6.222 8.6 3.143l5.54 3.08L8.6 9.3Zm21.8 15.51-13.2 7.334V38.3l13.2-7.334v-6.156ZM9.6 11.034l5.6-3.11v14.6l-5.6 3.11v-14.6Z"
-    />
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 40 40" aria-hidden="true" {{ $attributes }}>
+    <defs>
+        <linearGradient id="aurum-logo-gold" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#F4DF8F" />
+            <stop offset="0.5" stop-color="#E0B434" />
+            <stop offset="1" stop-color="#A67D1C" />
+        </linearGradient>
+    </defs>
+    <path d="M20 1.5 36 10.75v18.5L20 38.5 4 29.25v-18.5Z" fill="url(#aurum-logo-gold)" />
+    <path d="M20 6.2 31.9 13.1v13.8L20 33.8 8.1 26.9V13.1Z" fill="#0B1B3A" />
+    <path d="M13.2 27.5 20 11.5l6.8 16h-3.6l-1.3-3.3h-3.8l-1.3 3.3Zm6.8-10.1-1.3 3.6h2.6Z" fill="url(#aurum-logo-gold)" />
+    <path d="M18.6 9.6v2.6M21.4 9.6v2.6" stroke="#E0B434" stroke-width="1.4" stroke-linecap="round" />
 </svg>

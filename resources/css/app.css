@@ -2,6 +2,7 @@
 @import '../../vendor/livewire/flux/dist/flux.css';
 
 @source '../views';
+@source '../js';
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
 @source '../../vendor/livewire/flux-pro/stubs/**/*.blade.php';
 @source '../../vendor/livewire/flux/stubs/**/*.blade.php';
@@ -10,29 +11,74 @@
 
 @theme {
     --font-sans: 'Instrument Sans', ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji', 'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+    --font-display: 'Space Grotesk', 'Instrument Sans', ui-sans-serif, system-ui, sans-serif;
 
-    --color-zinc-50: #fafafa;
-    --color-zinc-100: #f5f5f5;
-    --color-zinc-200: #e5e5e5;
-    --color-zinc-300: #d4d4d4;
-    --color-zinc-400: #a3a3a3;
-    --color-zinc-500: #737373;
-    --color-zinc-600: #525252;
-    --color-zinc-700: #404040;
-    --color-zinc-800: #262626;
-    --color-zinc-900: #171717;
-    --color-zinc-950: #0a0a0a;
+    /* Neutral greys with a slight navy tint so the gold reads warmer. */
+    --color-zinc-50: #f8f9fc;
+    --color-zinc-100: #f1f3f8;
+    --color-zinc-200: #e2e6ef;
+    --color-zinc-300: #cad0de;
+    --color-zinc-400: #98a1b6;
+    --color-zinc-500: #6b7489;
+    --color-zinc-600: #4b5468;
+    --color-zinc-700: #2c3550;
+    --color-zinc-800: #172244;
+    --color-zinc-900: #0e1834;
+    --color-zinc-950: #081127;
 
-    --color-accent: var(--color-neutral-800);
-    --color-accent-content: var(--color-neutral-800);
+    /* AurumBit brand: gold on deep navy. */
+    --color-gold-50: #fdf9ec;
+    --color-gold-100: #faf0c9;
+    --color-gold-200: #f4df8f;
+    --color-gold-300: #ecc955;
+    --color-gold-400: #e0b434;
+    --color-gold-500: #c9a227;
+    --color-gold-600: #a67d1c;
+    --color-gold-700: #845c19;
+    --color-gold-800: #6d4a1b;
+    --color-gold-900: #5d3e1b;
+
+    --color-navy-50: #eef2fb;
+    --color-navy-100: #d9e1f4;
+    --color-navy-200: #b2c2e7;
+    --color-navy-300: #8098d3;
+    --color-navy-400: #4f6cb8;
+    --color-navy-500: #2f4c97;
+    --color-navy-600: #213876;
+    --color-navy-700: #172a5b;
+    --color-navy-800: #0f2048;
+    --color-navy-900: #0b1b3a;
+    --color-navy-950: #060f24;
+
+    --color-accent: var(--color-gold-600);
+    --color-accent-content: var(--color-gold-700);
     --color-accent-foreground: var(--color-white);
+
+    --animate-marquee: marquee 40s linear infinite;
+    --animate-float: float 6s ease-in-out infinite;
+    --animate-shine: shine 3.5s ease-in-out infinite;
+
+    @keyframes marquee {
+        from { transform: translateX(0); }
+        to { transform: translateX(-50%); }
+    }
+
+    @keyframes float {
+        0%, 100% { transform: translateY(0); }
+        50% { transform: translateY(-10px); }
+    }
+
+    @keyframes shine {
+        0% { background-position: 200% center; }
+        100% { background-position: -200% center; }
+    }
 }
 
 @layer theme {
     .dark {
-        --color-accent: var(--color-white);
-        --color-accent-content: var(--color-white);
-        --color-accent-foreground: var(--color-neutral-800);
+        --color-accent: var(--color-gold-400);
+        --color-accent-content: var(--color-gold-300);
+        --color-accent-foreground: var(--color-navy-950);
     }
 }
 
@@ -44,6 +90,66 @@
     ::backdrop,
     ::file-selector-button {
         border-color: var(--color-gray-200, currentColor);
+    }
+
+    .font-display {
+        letter-spacing: -0.02em;
+    }
+}
+
+@layer components {
+    /* Gold text with a slow moving sheen. */
+    .text-gold-gradient {
+        background-image: linear-gradient(110deg, var(--color-gold-600) 20%, var(--color-gold-300) 40%, var(--color-gold-500) 60%, var(--color-gold-700) 80%);
+        background-size: 200% auto;
+        background-clip: text;
+        -webkit-background-clip: text;
+        color: transparent;
+    }
+
+    /* Elements fade up when scrolled into view (see resources/js/site.js). */
+    [data-reveal] {
+        opacity: 0;
+        transform: translateY(18px);
+        transition: opacity 0.7s ease, transform 0.7s cubic-bezier(0.2, 0.7, 0.2, 1);
+        transition-delay: var(--reveal-delay, 0ms);
+    }
+
+    [data-reveal].is-visible {
+        opacity: 1;
+        transform: none;
+    }
+
+    .price-up {
+        animation: flash-up 1.2s ease;
+    }
+
+    .price-down {
+        animation: flash-down 1.2s ease;
+    }
+
+    @keyframes flash-up {
+        0% { background-color: rgb(34 197 94 / 0.25); }
+        100% { background-color: transparent; }
+    }
+
+    @keyframes flash-down {
+        0% { background-color: rgb(239 68 68 / 0.25); }
+        100% { background-color: transparent; }
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    [data-reveal] {
+        opacity: 1;
+        transform: none;
+        transition: none;
+    }
+
+    .animate-marquee,
+    .animate-float,
+    .animate-shine {
+        animation: none;
     }
 }
 
@@ -60,7 +166,3 @@ textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
     @apply outline-hidden ring-2 ring-accent ring-offset-2 ring-offset-accent-foreground;
 }
-
-/* \[:where(&)\]:size-4 {
-    @apply size-4;
-} */

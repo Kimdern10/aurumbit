@@ -54,6 +54,26 @@
                 viewable
             />
 
+            <input type="hidden" name="ref" value="{{ old('ref', request('ref')) }}">
+
+            @if (filled(old('ref', request('ref'))))
+                <flux:text class="-mt-2 text-sm">{{ __('Invited with code :code', ['code' => strtoupper(old('ref', request('ref')))]) }}</flux:text>
+            @endif
+
+            <flux:field variant="inline">
+                <flux:checkbox name="terms" value="1" :checked="(bool) old('terms')" required />
+                <flux:label class="text-sm leading-snug">
+                    <span>
+                        {{ __('I have read the') }}
+                        <a href="{{ route('legal.terms') }}" target="_blank" class="font-medium underline">{{ __('terms') }}</a>
+                        {{ __('and') }}
+                        <a href="{{ route('legal.risk') }}" target="_blank" class="font-medium underline">{{ __('risk disclosure') }}</a>,
+                        {{ __('and I understand this is a demo with no real funds.') }}
+                    </span>
+                </flux:label>
+                <flux:error name="terms" />
+            </flux:field>
+
             <div class="flex items-center justify-end">
                 <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
                     {{ __('Create account') }}
