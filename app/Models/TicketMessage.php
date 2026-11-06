@@ -15,11 +15,13 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $user_id
  * @property bool $from_staff
  * @property string $body
+ * @property string|null $attachment_path
+ * @property string|null $attachment_name
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  * @property-read SupportTicket $ticket
  */
-#[Fillable(['user_id', 'from_staff', 'body'])]
+#[Fillable(['user_id', 'from_staff', 'body', 'attachment_path', 'attachment_name'])]
 class TicketMessage extends Model
 {
     /** @use HasFactory<TicketMessageFactory> */
@@ -41,5 +43,17 @@ class TicketMessage extends Model
     public function ticket(): BelongsTo
     {
         return $this->belongsTo(SupportTicket::class, 'support_ticket_id');
+    }
+
+    /**
+     * Where to open the attached file, or null when there is none.
+     */
+    public function attachmentUrl(bool $forAdmin = false): ?string
+    {
+        if ($this->attachment_path === null) {
+            return null;
+        }
+
+        return route($forAdmin ? 'admin.tickets.attachment' : 'support.attachment', $this);
     }
 }

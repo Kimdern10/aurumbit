@@ -6,6 +6,7 @@ use App\Http\Controllers\PriceController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\SitemapController;
 use App\Http\Controllers\StatementController;
+use App\Http\Controllers\TicketAttachmentController;
 use App\Http\Middleware\CatchUpInvestments;
 use App\Http\Middleware\RedirectAdminsToAdminArea;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,7 @@ Route::middleware(['auth', 'verified', RedirectAdminsToAdminArea::class, CatchUp
     Route::livewire('notifications', 'pages::notifications')->name('notifications');
     Route::livewire('support', 'pages::support')->name('support');
     Route::livewire('support/{ticket}', 'pages::support-ticket')->name('support.show');
+    Route::get('support/attachments/{message}', TicketAttachmentController::class)->name('support.attachment');
     Route::get('transactions/statement.csv', StatementController::class)->name('transactions.export');
 });
 
@@ -50,6 +52,7 @@ Route::middleware(['auth', 'verified', 'admin', CatchUpInvestments::class])->pre
     Route::get('receipts/{kind}/{id}', ReceiptController::class)->whereIn('kind', ['deposit', 'withdrawal', 'plan'])->whereNumber('id')->name('receipts.show');
     Route::livewire('support', 'pages::admin.tickets')->name('tickets');
     Route::livewire('support/{ticket}', 'pages::admin.ticket')->name('tickets.show');
+    Route::get('support/attachments/{message}', TicketAttachmentController::class)->name('tickets.attachment');
     Route::livewire('audit-log', 'pages::admin.ledger')->name('ledger');
     Route::livewire('settings', 'pages::admin.settings')->name('settings');
     Route::livewire('sign-ins', 'pages::admin.sign-ins')->name('sign-ins');

@@ -9,6 +9,8 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Str;
 
 /**
  * A help request from a user, answered by staff in the admin area.
@@ -64,9 +66,11 @@ class SupportTicket extends Model
     }
 
     /**
-     * Add a message and move the ticket to the right status.
+     * Add a message, with an optional file, and move the ticket to the right
+     * status. Files are kept privately under the customer's folder so they
+     * are removed with the account.
      */
-    public function reply(User $author, string $body): TicketMessage
+    public function reply(User $author, string $body, ?UploadedFile $attachment = null): TicketMessage
     {
         $fromStaff = $author->is_admin && $author->id !== $this->user_id;
 
@@ -74,6 +78,8 @@ class SupportTicket extends Model
             'user_id' => $author->id,
             'from_staff' => $fromStaff,
             'body' => $body,
+            'attachment_path' => $attachment?->store('support/'.$this->user_id, 'local') ?: null,
+            'attachment_name' => $attachment ? Str::limit($attachment->getClientOriginalName(), 120) : null,
         ]);
 
         $this->forceFill(['status' => $fromStaff ? 'answered' : 'open', 'last_reply_at' => now()])->save();

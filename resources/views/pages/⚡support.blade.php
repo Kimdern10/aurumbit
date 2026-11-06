@@ -9,14 +9,19 @@ use Illuminate\Support\Facades\RateLimiter;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 new #[Title('Support')] class extends Component {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public string $subject = '';
 
     public string $message = '';
+
+    /** @var TemporaryUploadedFile|null */
+    public $attachment = null;
 
     /**
      * @return LengthAwarePaginator<int, SupportTicket>
@@ -32,6 +37,7 @@ new #[Title('Support')] class extends Component {
         $this->validate([
             'subject' => ['required', 'string', 'min:4', 'max:150'],
             'message' => ['required', 'string', 'min:10', 'max:5000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
         ]);
 
         $key = 'ticket:'.Auth::id();
@@ -46,7 +52,7 @@ new #[Title('Support')] class extends Component {
 
         $ticket = DB::transaction(function (): SupportTicket {
             $ticket = Auth::user()->supportTickets()->create(['subject' => $this->subject]);
-            $ticket->reply(Auth::user(), $this->message);
+            $ticket->reply(Auth::user(), $this->message, $this->attachment);
 
             return $ticket;
         });
@@ -68,6 +74,7 @@ new #[Title('Support')] class extends Component {
             <flux:heading>{{ __('Open a new ticket') }}</flux:heading>
             <flux:input wire:model="subject" :label="__('Subject')" :placeholder="__('e.g. My deposit has not been credited')" />
             <flux:textarea wire:model="message" :label="__('Message')" rows="4" :description="__('Include the transaction ID if your question is about a deposit or withdrawal. Never share your password or wallet recovery words.')" />
+            <flux:input type="file" wire:model="attachment" :label="__('Attach a screenshot or PDF (optional)')" :description="__('JPG, PNG, WEBP or PDF, up to 5 MB.')" accept=".jpg,.jpeg,.png,.webp,.pdf" />
             <flux:button type="submit" variant="primary" icon="paper-airplane">{{ __('Send') }}</flux:button>
         </form>
     </flux:card>

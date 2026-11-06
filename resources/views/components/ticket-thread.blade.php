@@ -14,6 +14,12 @@
                     · {{ $message->created_at?->format('M j, g:i A') }}
                 </p>
                 <p class="whitespace-pre-line">{{ $message->body }}</p>
+                @if ($url = $message->attachmentUrl(forAdmin: $viewerIsStaff))
+                    <a href="{{ $url }}" target="_blank" rel="noopener" class="mt-2 inline-flex max-w-full items-center gap-1.5 rounded-lg bg-black/5 px-2.5 py-1.5 text-xs font-medium underline dark:bg-white/10" data-ticket-attachment>
+                        <flux:icon.paper-clip variant="micro" class="shrink-0" />
+                        <span class="truncate">{{ $message->attachment_name }}</span>
+                    </a>
+                @endif
             </div>
         </div>
     @endforeach

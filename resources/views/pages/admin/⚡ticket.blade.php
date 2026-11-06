@@ -4,27 +4,38 @@ use App\Models\SupportTicket;
 use App\Notifications\AccountActivity;
 use Flux\Flux;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Str;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\Features\SupportFileUploads\TemporaryUploadedFile;
+use Livewire\WithFileUploads;
 
 new #[Title('Support ticket')] class extends Component {
+    use WithFileUploads;
+
     public SupportTicket $ticket;
 
     public string $message = '';
 
+    /** @var TemporaryUploadedFile|null */
+    public $attachment = null;
+
     public function send(): void
     {
-        $this->validate(['message' => ['required', 'string', 'min:2', 'max:5000']]);
+        $this->validate([
+            'message' => ['required', 'string', 'min:2', 'max:5000'],
+            'attachment' => ['nullable', 'file', 'mimes:jpg,jpeg,png,webp,pdf', 'max:5120'],
+        ]);
 
-        $this->ticket->reply(Auth::user(), $this->message);
+        $this->ticket->reply(Auth::user(), $this->message, $this->attachment);
         $this->ticket->user->notify(new AccountActivity(
             'Support replied',
-            'We replied to your ticket "'.$this->ticket->subject.'".',
+            'We replied to your ticket "'.$this->ticket->subject.'": '.Str::limit($this->message, 300),
             route('support.show', $this->ticket),
         ));
 
         $this->ticket->unsetRelation('messages');
-        $this->reset('message');
+        $this->reset('message', 'attachment');
         Flux::toast(variant: 'success', text: __('Reply sent.'));
     }
 
@@ -55,7 +66,8 @@ new #[Title('Support ticket')] class extends Component {
     <x-ticket-thread :ticket="$ticket" viewer-is-staff />
 
     <form wire:submit="send" class="space-y-3">
-        <flux:textarea wire:model="message" :label="__('Reply to the user')" rows="4" :description="__('The user gets a notification in their dashboard.')" />
+        <flux:textarea wire:model="message" :label="__('Reply to the user')" rows="4" :description="__('The user gets a notification in their dashboard and by email.')" />
+        <flux:input type="file" wire:model="attachment" :label="__('Attach a screenshot or PDF (optional)')" :description="__('JPG, PNG, WEBP or PDF, up to 5 MB.')" accept=".jpg,.jpeg,.png,.webp,.pdf" />
         <flux:button type="submit" variant="primary" icon="paper-airplane">{{ __('Send reply') }}</flux:button>
     </form>
 </div>

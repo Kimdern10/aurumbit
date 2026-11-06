@@ -83,9 +83,10 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             }
         });
 
-        // Identity documents are personal data: remove them with the account.
+        // Identity documents and support files are personal data: remove them with the account.
         static::deleting(function (User $user): void {
             Storage::disk('local')->deleteDirectory('kyc/'.$user->id);
+            Storage::disk('local')->deleteDirectory('support/'.$user->id);
         });
     }
 
