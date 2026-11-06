@@ -68,6 +68,50 @@ new #[Title('Dashboard')] class extends Component {
     }
 
     /**
+     * The running plan that pays out first, with what it is set to pay.
+     *
+     * @return array{investment: Investment, payout: int, others: int}|null
+     */
+    #[Computed]
+    public function nextPayout(): ?array
+    {
+        $investment = $this->activeInvestments->sortBy('ends_at')->first();
+
+        return $investment === null ? null : [
+            'investment' => $investment,
+            'payout' => $investment->amount_micros + $investment->totalProfit(),
+            'others' => $this->activeInvestments->count() - 1,
+        ];
+    }
+
+    /**
+     * Total plan profit at the end of each of the last 30 days, so the user
+     * sees their earnings build up day by day. Cancelled plans earn nothing.
+     *
+     * @return list<array{label: string, value: int, text: string}>
+     */
+    #[Computed]
+    public function earningsHistory(): array
+    {
+        $investments = Auth::user()->investments()->where('status', '!=', InvestmentStatus::Cancelled)->get();
+
+        if ($investments->isEmpty()) {
+            return [];
+        }
+
+        $firstDay = $investments->min('starts_at')->copy()->startOfDay()->max(now()->subDays(29)->startOfDay());
+        $points = [];
+
+        for ($day = $firstDay; $day->lessThanOrEqualTo(now()); $day = $day->addDay()) {
+            $at = $day->copy()->endOfDay()->min(now());
+            $earned = (int) $investments->sum(fn (Investment $investment): int => $investment->earningsAt($at));
+            $points[] = ['label' => $day->format('M j'), 'value' => $earned, 'text' => $day->format('M j').': '.Usdt::format($earned, $earned > 0 && $earned < 1_000_000 ? 4 : 2).' USDT'];
+        }
+
+        return $points;
+    }
+
+    /**
      * @return Collection<int, LedgerEntry>
      */
     #[Computed]
@@ -170,6 +214,37 @@ new #[Title('Dashboard')] class extends Component {
         <x-stat-card :label="__('Pending withdrawals')" icon="arrow-up-tray" :hint="__('Waiting for admin review')">
             <x-usdt :micros="$this->totals['pending_withdrawals']" />
         </x-stat-card>
+    </div>
+
+    <div class="grid gap-6 xl:grid-cols-3">
+        <flux:card class="flex flex-col" data-next-payout>
+            <flux:heading class="flex items-center gap-2"><flux:icon.calendar-days variant="mini" class="text-brand-600" /> {{ __('Next payout') }}</flux:heading>
+            @if ($next = $this->nextPayout)
+                <p class="mt-4 text-sm text-zinc-500">{{ $next['investment']->plan->name }}</p>
+                <x-usdt :micros="$next['payout']" class="mt-1 block font-display text-2xl font-bold text-zinc-900 dark:text-white" />
+                <p class="mt-1 text-sm text-zinc-500">
+                    {{ __(':date · :when', ['date' => $next['investment']->ends_at->format('M j, Y'), 'when' => $next['investment']->ends_at->diffForHumans()]) }}
+                </p>
+                <flux:progress class="mt-4" :value="$next['investment']->progressPercent()" />
+                <p class="mt-2 text-xs text-zinc-500">
+                    {{ __(':capital USDT capital + :profit USDT target profit, paid to your balance.', ['capital' => Usdt::format($next['investment']->amount_micros), 'profit' => Usdt::format($next['investment']->totalProfit())]) }}
+                    @if ($next['others'] > 0)
+                        {{ trans_choice('You have :count more plan running.|You have :count more plans running.', $next['others']) }}
+                    @endif
+                </p>
+            @else
+                <flux:text class="mt-4">{{ __('No plan is running. When you join one, its payout date shows here.') }}</flux:text>
+                <div class="mt-auto pt-4"><flux:button size="sm" :href="route('invest')" wire:navigate>{{ __('Compare plans') }}</flux:button></div>
+            @endif
+        </flux:card>
+
+        <flux:card class="xl:col-span-2" data-earnings-chart>
+            <div class="flex items-center justify-between">
+                <flux:heading>{{ __('Earnings growth') }}</flux:heading>
+                <flux:text class="text-xs">{{ __('Plan profit, day by day') }}</flux:text>
+            </div>
+            <x-chart.line class="mt-6" :points="$this->earningsHistory" :empty="__('Your earnings will build up here, day by day, once you join a plan.')" />
+        </flux:card>
     </div>
 
     <div class="grid gap-6 xl:grid-cols-3">

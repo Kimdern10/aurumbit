@@ -63,7 +63,12 @@ new #[Title('My investments')] class extends Component {
                                 <p class="text-xs text-zinc-500">{{ __('+:daily USDT a day · next :when', ['daily' => \App\Support\Usdt::format($investment->dailyEarning(), $investment->dailyEarning() < 1_000_000 ? 4 : 2), 'when' => $next->diffForHumans()]) }}</p>
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge>
+                            @if ($investment->settled_at)
+                                <a href="{{ $investment->receiptUrl() }}" class="mt-1 block font-mono text-[11px] text-brand-600 underline" data-plan-receipt>{{ $investment->code() }}</a>
+                            @endif
+                        </flux:table.cell>
                     </flux:table.row>
                 @empty
                     <flux:table.row>

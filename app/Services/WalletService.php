@@ -364,7 +364,7 @@ class WalletService
 
             $locked->forceFill(['earned_micros' => $earned, 'status' => InvestmentStatus::Completed, 'settled_at' => now()])->save();
 
-            $user->notify(new AccountActivity('Plan completed', $locked->plan->name.' finished. '.Usdt::format($locked->amount_micros + $earned).' USDT (including '.Usdt::format($earned).' USDT profit) is in your balance.', route('investments'), 'success'));
+            $user->notify(new AccountActivity('Plan completed', $locked->plan->name.' finished. '.Usdt::format($locked->amount_micros + $earned).' USDT (including '.Usdt::format($earned).' USDT profit) is in your balance. Reference '.$locked->code().'.', $locked->receiptUrl(), 'success'));
         });
     }
 

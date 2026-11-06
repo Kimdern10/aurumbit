@@ -107,7 +107,10 @@ new #[Title('Investments')] class extends Component {
                         <flux:table.cell><x-usdt :micros="$investment->amount_micros" /></flux:table.cell>
                         <flux:table.cell class="whitespace-nowrap text-xs">{{ $investment->starts_at->format('M j') }} → {{ $investment->ends_at->format('M j, Y') }}</flux:table.cell>
                         <flux:table.cell><x-usdt :micros="$investment->earnedSoFar()" :decimals="4" /></flux:table.cell>
-                        <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
+                        <flux:table.cell>
+                            <flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge>
+                            <a href="{{ $investment->receiptUrl(forAdmin: true) }}" class="mt-1 block font-mono text-[11px] text-brand-600 underline">{{ $investment->code() }}</a>
+                        </flux:table.cell>
                         <flux:table.cell align="end">
                             @if ($investment->status === InvestmentStatus::Active && $canManageMoney)
                                 <div class="flex justify-end gap-2">

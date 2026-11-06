@@ -26,7 +26,7 @@ Route::middleware(['auth', 'verified', RedirectAdminsToAdminArea::class, CatchUp
     Route::livewire('withdraw', 'pages::withdraw')->name('withdraw');
     Route::livewire('transactions', 'pages::transactions')->name('transactions');
     Route::redirect('history', 'transactions?view=requests')->name('history');
-    Route::get('receipts/{kind}/{id}', ReceiptController::class)->whereIn('kind', ['deposit', 'withdrawal'])->whereNumber('id')->name('receipts.show');
+    Route::get('receipts/{kind}/{id}', ReceiptController::class)->whereIn('kind', ['deposit', 'withdrawal', 'plan'])->whereNumber('id')->name('receipts.show');
     Route::livewire('verification', 'pages::kyc')->name('kyc');
     Route::livewire('referrals', 'pages::referrals')->name('referrals');
     Route::livewire('notifications', 'pages::notifications')->name('notifications');
@@ -47,7 +47,7 @@ Route::middleware(['auth', 'verified', 'admin', CatchUpInvestments::class])->pre
     Route::get('verifications/{kycSubmission}/{file}', KycFileController::class)->whereIn('file', ['document', 'selfie'])->name('kyc.file');
     Route::livewire('announcements', 'pages::admin.announcements')->name('announcements');
     Route::livewire('wallets', 'pages::admin.wallets')->name('wallets');
-    Route::get('receipts/{kind}/{id}', ReceiptController::class)->whereIn('kind', ['deposit', 'withdrawal'])->whereNumber('id')->name('receipts.show');
+    Route::get('receipts/{kind}/{id}', ReceiptController::class)->whereIn('kind', ['deposit', 'withdrawal', 'plan'])->whereNumber('id')->name('receipts.show');
     Route::livewire('support', 'pages::admin.tickets')->name('tickets');
     Route::livewire('support/{ticket}', 'pages::admin.ticket')->name('tickets.show');
     Route::livewire('audit-log', 'pages::admin.ledger')->name('ledger');

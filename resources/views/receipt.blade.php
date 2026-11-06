@@ -4,14 +4,38 @@
     use App\Support\Usdt;
 
     $siteName = Setting::get('site_name');
-    $title = ($isDeposit ? __('Deposit receipt') : __('Withdrawal receipt')).' '.$item->code();
+    $receiptName = match ($kind) {
+        'deposit' => __('Deposit receipt'),
+        'withdrawal' => __('Withdrawal receipt'),
+        'plan' => __('Plan receipt'),
+    };
+    $title = $receiptName.' '.$item->code();
     $statusTone = match ($item->status->value) {
-        'approved' => 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400',
-        'rejected' => 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400',
+        'approved', 'completed' => 'bg-green-50 text-green-700 ring-green-600/20 dark:bg-green-500/10 dark:text-green-400',
+        'rejected', 'cancelled' => 'bg-red-50 text-red-700 ring-red-600/20 dark:bg-red-500/10 dark:text-red-400',
         default => 'bg-amber-50 text-amber-700 ring-amber-600/20 dark:bg-amber-500/10 dark:text-amber-400',
     };
+    $headlineLabel = $kind === 'withdrawal' ? __('You receive') : __('Amount');
+    $note = $kind === 'plan' ? null : $item->admin_note;
 
-    if ($isDeposit) {
+    if ($kind === 'plan') {
+        $returned = $item->status->value === 'active' ? null : $item->amount_micros + $item->earned_micros;
+        $rows = [
+            __('Reference') => $item->code(),
+            __('Account') => $item->user->name.' · '.$item->user->email,
+            __('Plan') => $item->plan->name,
+            __('Amount invested') => Usdt::format($item->amount_micros).' USDT',
+            __('Target rate') => __(':rate% over :days days (a target, not a guarantee)', ['rate' => rtrim(rtrim(number_format($item->target_return_bps / 100, 2), '0'), '.'), 'days' => $item->duration_days]),
+            __('Started') => $item->starts_at->format('M j, Y g:i A'),
+            __('Term ends') => $item->ends_at->format('M j, Y g:i A'),
+            __('Profit paid') => $returned === null ? __(':amount USDT so far (paid at the end)', ['amount' => Usdt::format($item->earnedSoFar())]) : Usdt::format($item->earned_micros).' USDT',
+            __('Total returned to balance') => $returned === null ? __('Not paid out yet') : Usdt::format($returned).' USDT',
+            __('Closed') => $item->settled_at?->format('M j, Y g:i A') ?? __('Still running'),
+        ];
+        $headlineLabel = $returned === null ? __('Invested') : __('Returned to your balance');
+        $headline = Usdt::format($returned ?? $item->amount_micros).' USDT';
+        $explorer = null;
+    } elseif ($kind === 'deposit') {
         $rows = [
             __('Coin sent') => $item->coinLabel(),
             __('Network') => $item->network ?? '—',
@@ -37,6 +61,16 @@
         $headline = $item->payoutLabel();
         $explorer = $item->payoutUrl();
     }
+
+    if ($kind !== 'plan') {
+        $rows = [
+            __('Reference') => $item->code(),
+            __('Requested') => $item->created_at->format('M j, Y g:i A'),
+            __('Account') => $item->user->name.' · '.$item->user->email,
+            ...$rows,
+            __('Reviewed') => $item->reviewed_at?->format('M j, Y g:i A') ?? __('Waiting for review'),
+        ];
+    }
 @endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}">
@@ -54,7 +88,7 @@
         <div class="mx-auto w-full max-w-2xl px-4 py-8 sm:py-12 print:max-w-none print:p-0">
             <div class="mb-6 flex flex-wrap items-center justify-between gap-3 print:hidden">
                 <a href="{{ $backUrl }}" wire:navigate class="inline-flex items-center gap-1.5 text-sm font-semibold text-ink-900 hover:text-brand-600 dark:text-white">
-                    <flux:icon.arrow-left variant="micro" /> {{ __('Back to transactions') }}
+                    <flux:icon.arrow-left variant="micro" /> {{ $kind === 'plan' ? __('Back to investments') : __('Back to transactions') }}
                 </a>
                 <flux:button variant="primary" icon="printer" onclick="window.print()" data-print-receipt>{{ __('Print / Save as PDF') }}</flux:button>
             </div>
@@ -69,7 +103,7 @@
                         </div>
                     </div>
                     <div class="text-end">
-                        <p class="text-xs font-semibold tracking-[0.14em] text-brand-600 uppercase">{{ $isDeposit ? __('Deposit receipt') : __('Withdrawal receipt') }}</p>
+                        <p class="text-xs font-semibold tracking-[0.14em] text-brand-600 uppercase">{{ $receiptName }}</p>
                         <p class="mt-1 font-mono text-sm text-ink-900 dark:text-white print:dark:text-ink-900">{{ $item->code() }}</p>
                     </div>
                 </header>
@@ -77,20 +111,14 @@
                 <div class="p-6 sm:p-8">
                     <div class="flex flex-wrap items-end justify-between gap-4">
                         <div class="min-w-0">
-                            <p class="text-sm text-ink-500">{{ $isDeposit ? __('Amount') : __('You receive') }}</p>
+                            <p class="text-sm text-ink-500">{{ $headlineLabel }}</p>
                             <p class="mt-1 font-display text-3xl font-extrabold [overflow-wrap:anywhere] text-ink-950 sm:text-4xl dark:text-white print:dark:text-ink-950">{{ $headline }}</p>
                         </div>
                         <span class="inline-flex items-center rounded-full px-3 py-1 text-sm font-semibold ring-1 ring-inset {{ $statusTone }}">{{ $item->status->label() }}</span>
                     </div>
 
                     <dl class="mt-8 divide-y divide-ink-100 text-sm dark:divide-white/10 print:dark:divide-ink-100">
-                        @foreach ([
-                            __('Reference') => $item->code(),
-                            __('Requested') => $item->created_at->format('M j, Y g:i A'),
-                            __('Account') => $item->user->name.' · '.$item->user->email,
-                            ...$rows,
-                            __('Reviewed') => $item->reviewed_at?->format('M j, Y g:i A') ?? __('Waiting for review'),
-                        ] as $label => $value)
+                        @foreach ($rows as $label => $value)
                             <div class="grid gap-1 py-3 sm:grid-cols-3 sm:gap-4">
                                 <dt class="text-ink-500">{{ $label }}</dt>
                                 <dd class="font-medium [overflow-wrap:anywhere] text-ink-900 sm:col-span-2 dark:text-white print:dark:text-ink-900 @if (str_contains($label, 'address') || str_contains($label, 'ID')) font-mono text-xs @endif">{{ $value }}</dd>
@@ -102,10 +130,10 @@
                                 <dd class="font-medium text-ink-900 sm:col-span-2 dark:text-white print:dark:text-ink-900">{{ Usdt::format($balanceAfter) }} USDT</dd>
                             </div>
                         @endif
-                        @if ($item->admin_note)
+                        @if ($note)
                             <div class="grid gap-1 py-3 sm:grid-cols-3 sm:gap-4">
                                 <dt class="text-ink-500">{{ __('Note') }}</dt>
-                                <dd class="text-ink-900 sm:col-span-2 dark:text-white print:dark:text-ink-900">{{ $item->admin_note }}</dd>
+                                <dd class="text-ink-900 sm:col-span-2 dark:text-white print:dark:text-ink-900">{{ $note }}</dd>
                             </div>
                         @endif
                     </dl>

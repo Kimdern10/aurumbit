@@ -77,6 +77,22 @@ class Investment extends Model
     }
 
     /**
+     * The reference shown to the user, e.g. PL-00042.
+     */
+    public function code(): string
+    {
+        return 'PL-'.str_pad((string) $this->id, 5, '0', STR_PAD_LEFT);
+    }
+
+    /**
+     * The printable receipt for this plan.
+     */
+    public function receiptUrl(bool $forAdmin = false): string
+    {
+        return route($forAdmin ? 'admin.receipts.show' : 'receipts.show', ['kind' => 'plan', 'id' => $this->id]);
+    }
+
+    /**
      * Whole days that have passed in the term, capped at the term length.
      */
     public function elapsedDays(?CarbonInterface $at = null): int
