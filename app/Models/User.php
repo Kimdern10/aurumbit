@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AdminRole;
 use App\Enums\InvestmentStatus;
 use App\Enums\KycStatus;
 use App\Support\EmailVerificationCode;
@@ -30,6 +31,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $password
  * @property CarbonInterface|null $password_changed_at
  * @property bool $is_admin
+ * @property AdminRole|null $admin_role
  * @property bool $is_suspended
  * @property CarbonInterface|null $suspended_until
  * @property string|null $suspension_reason
@@ -99,12 +101,21 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             'password' => 'hashed',
             'password_changed_at' => 'datetime',
             'is_admin' => 'boolean',
+            'admin_role' => AdminRole::class,
             'is_suspended' => 'boolean',
             'suspended_until' => 'datetime',
             'banned_at' => 'datetime',
             'email_notifications' => 'boolean',
             'balance_micros' => 'integer',
         ];
+    }
+
+    /**
+     * A full admin, who may move money and change plans, wallets and settings.
+     */
+    public function isOwner(): bool
+    {
+        return $this->is_admin && $this->admin_role === AdminRole::Owner;
     }
 
     public function isBanned(): bool

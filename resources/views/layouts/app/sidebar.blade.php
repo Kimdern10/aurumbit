@@ -12,16 +12,19 @@
             </flux:sidebar.header>
 
             @if ($isAdmin)
-                <div class="mx-2 rounded-lg bg-brand-400/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-brand-300 uppercase in-data-flux-sidebar-collapsed-desktop:hidden">{{ __('Admin panel') }}</div>
+                <div class="mx-2 rounded-lg bg-brand-400/15 px-3 py-1.5 text-xs font-semibold tracking-wide text-brand-300 uppercase in-data-flux-sidebar-collapsed-desktop:hidden">{{ auth()->user()->isOwner() ? __('Admin panel') : __('Admin panel · Support') }}</div>
             @endif
 
             <flux:sidebar.nav>
                 @if ($isAdmin)
                     @php($pending = \App\Support\AdminCounts::pending())
+                    @php($isOwner = auth()->user()->isOwner())
                     <flux:sidebar.group :heading="__('Overview')" class="grid">
                         <flux:sidebar.item icon="squares-2x2" :href="route('admin.dashboard')" :current="request()->routeIs('admin.dashboard')" wire:navigate.hover>{{ __('Dashboard') }}</flux:sidebar.item>
                         <flux:sidebar.item icon="users" :href="route('admin.users')" :current="request()->routeIs('admin.users*')" wire:navigate.hover>{{ __('Users') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="document-magnifying-glass" :href="route('admin.ledger')" :current="request()->routeIs('admin.ledger')" wire:navigate.hover>{{ __('Audit log') }}</flux:sidebar.item>
+                        @if ($isOwner)
+                            <flux:sidebar.item icon="document-magnifying-glass" :href="route('admin.ledger')" :current="request()->routeIs('admin.ledger')" wire:navigate.hover>{{ __('Audit log') }}</flux:sidebar.item>
+                        @endif
                     </flux:sidebar.group>
                     <flux:sidebar.group :heading="__('To review')" class="grid">
                         <flux:sidebar.item icon="arrow-down-tray" :href="route('admin.deposits')" :current="request()->routeIs('admin.deposits')" :badge="$pending['deposits'] ?: null" wire:navigate.hover>{{ __('Deposits') }}</flux:sidebar.item>
@@ -30,12 +33,24 @@
                         <flux:sidebar.item icon="chat-bubble-left-right" :href="route('admin.tickets')" :current="request()->routeIs('admin.tickets*')" :badge="$pending['tickets'] ?: null" wire:navigate.hover>{{ __('Support') }}</flux:sidebar.item>
                     </flux:sidebar.group>
                     <flux:sidebar.group :heading="__('Manage')" class="grid">
-                        <flux:sidebar.item icon="sparkles" :href="route('admin.plans')" :current="request()->routeIs('admin.plans')" wire:navigate.hover>{{ __('Plans') }}</flux:sidebar.item>
+                        @if ($isOwner)
+                            <flux:sidebar.item icon="sparkles" :href="route('admin.plans')" :current="request()->routeIs('admin.plans')" wire:navigate.hover>{{ __('Plans') }}</flux:sidebar.item>
+                        @endif
                         <flux:sidebar.item icon="chart-pie" :href="route('admin.investments')" :current="request()->routeIs('admin.investments')" wire:navigate.hover>{{ __('Investments') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="wallet" :href="route('admin.wallets')" :current="request()->routeIs('admin.wallets')" wire:navigate.hover>{{ __('Deposit wallets') }}</flux:sidebar.item>
+                        @if ($isOwner)
+                            <flux:sidebar.item icon="wallet" :href="route('admin.wallets')" :current="request()->routeIs('admin.wallets')" wire:navigate.hover>{{ __('Deposit wallets') }}</flux:sidebar.item>
+                        @endif
                         <flux:sidebar.item icon="megaphone" :href="route('admin.announcements')" :current="request()->routeIs('admin.announcements')" wire:navigate.hover>{{ __('Announcements') }}</flux:sidebar.item>
-                        <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings')" :current="request()->routeIs('admin.settings')" wire:navigate.hover>{{ __('Site settings') }}</flux:sidebar.item>
+                        @if ($isOwner)
+                            <flux:sidebar.item icon="cog-6-tooth" :href="route('admin.settings')" :current="request()->routeIs('admin.settings')" wire:navigate.hover>{{ __('Site settings') }}</flux:sidebar.item>
+                        @endif
                     </flux:sidebar.group>
+                    @if ($isOwner)
+                        <flux:sidebar.group :heading="__('Security')" class="grid">
+                            <flux:sidebar.item icon="finger-print" :href="route('admin.sign-ins')" :current="request()->routeIs('admin.sign-ins')" wire:navigate.hover>{{ __('Admin sign-ins') }}</flux:sidebar.item>
+                            <flux:sidebar.item icon="circle-stack" :href="route('admin.backups')" :current="request()->routeIs('admin.backups')" wire:navigate.hover>{{ __('Backups') }}</flux:sidebar.item>
+                        </flux:sidebar.group>
+                    @endif
                 @else
                     @php($unread = auth()->user()->unreadNotifications()->count())
                     <flux:sidebar.group :heading="__('My account')" class="grid">

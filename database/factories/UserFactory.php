@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\AdminRole;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
@@ -60,7 +61,15 @@ class UserFactory extends Factory
 
     public function admin(): static
     {
-        return $this->state(fn (array $attributes) => ['is_admin' => true]);
+        return $this->state(fn (array $attributes) => ['is_admin' => true, 'admin_role' => AdminRole::Owner]);
+    }
+
+    /**
+     * An admin who can help users but cannot move money or change settings.
+     */
+    public function support(): static
+    {
+        return $this->state(fn (array $attributes) => ['is_admin' => true, 'admin_role' => AdminRole::Support]);
     }
 
     public function suspended(): static

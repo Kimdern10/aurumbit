@@ -5,6 +5,7 @@ use App\Models\Plan;
 use App\Support\Usdt;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
@@ -15,6 +16,14 @@ use Livewire\WithPagination;
 
 new #[Title('Plans')] class extends Component {
     use WithPagination;
+
+    /**
+     * Only owners may open this page or use its actions.
+     */
+    public function boot(): void
+    {
+        Gate::authorize('manage-money');
+    }
 
     public ?int $editingId = null;
 

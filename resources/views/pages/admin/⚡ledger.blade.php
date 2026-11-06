@@ -3,6 +3,7 @@
 use App\Enums\LedgerType;
 use App\Models\LedgerEntry;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -11,6 +12,14 @@ use Livewire\WithPagination;
 
 new #[Title('Audit log')] class extends Component {
     use WithPagination;
+
+    /**
+     * Only owners may open this page or use its actions.
+     */
+    public function boot(): void
+    {
+        Gate::authorize('manage-money');
+    }
 
     #[Url]
     public string $search = '';

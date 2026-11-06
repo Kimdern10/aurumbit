@@ -11,6 +11,7 @@ use App\Support\Usdt;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -61,6 +62,8 @@ new #[Title('Deposits')] class extends Component {
      */
     public function startApprove(int $depositId, MarketPrices $prices, BybitAccount $bybit): void
     {
+        Gate::authorize('manage-money');
+
         $this->approvingId = $depositId;
         unset($this->approving);
         $check = $this->approving ? $bybit->checkDeposit($this->approving) : null;
@@ -75,6 +78,8 @@ new #[Title('Deposits')] class extends Component {
 
     public function approve(WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $this->validate(['creditUsdt' => ['required', 'regex:'.Usdt::INPUT_PATTERN]], [
             'creditUsdt.regex' => __('Enter a USDT amount, with up to 2 decimal places.'),
         ]);
@@ -92,6 +97,8 @@ new #[Title('Deposits')] class extends Component {
 
     public function startReject(int $depositId): void
     {
+        Gate::authorize('manage-money');
+
         $this->rejectingId = $depositId;
         $this->note = '';
         Flux::modal('reject-deposit')->show();
@@ -99,6 +106,8 @@ new #[Title('Deposits')] class extends Component {
 
     public function reject(WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $this->validate(['note' => ['required', 'string', 'max:500']]);
 
         try {
@@ -113,6 +122,8 @@ new #[Title('Deposits')] class extends Component {
     }
 };
 ?>
+
+@php($canManageMoney = auth()->user()->can('manage-money'))
 
 <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -173,7 +184,7 @@ new #[Title('Deposits')] class extends Component {
                             @if ($deposit->admin_note) <p class="mt-1 max-w-48 truncate text-xs text-zinc-500">{{ $deposit->admin_note }}</p> @endif
                         </flux:table.cell>
                         <flux:table.cell align="end">
-                            @if ($deposit->status === RequestStatus::Pending)
+                            @if ($deposit->status === RequestStatus::Pending && $canManageMoney)
                                 <div class="flex justify-end gap-2">
                                     <flux:button size="sm" variant="primary" wire:click="startApprove({{ $deposit->id }})">{{ __('Approve') }}</flux:button>
                                     <flux:button size="sm" variant="danger" wire:click="startReject({{ $deposit->id }})">{{ __('Reject') }}</flux:button>

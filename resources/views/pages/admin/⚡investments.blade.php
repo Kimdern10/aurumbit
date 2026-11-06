@@ -7,6 +7,7 @@ use App\Services\WalletService;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -41,6 +42,8 @@ new #[Title('Investments')] class extends Component {
      */
     public function settle(int $investmentId, WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $this->run(fn () => $wallet->settle(Investment::query()->findOrFail($investmentId), Auth::user()), __('Investment settled.'));
     }
 
@@ -49,6 +52,8 @@ new #[Title('Investments')] class extends Component {
      */
     public function cancel(int $investmentId, WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $this->run(fn () => $wallet->cancel(Investment::query()->findOrFail($investmentId), Auth::user()), __('Investment cancelled and principal returned.'));
     }
 
@@ -65,6 +70,8 @@ new #[Title('Investments')] class extends Component {
     }
 };
 ?>
+
+@php($canManageMoney = auth()->user()->can('manage-money'))
 
 <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -102,7 +109,7 @@ new #[Title('Investments')] class extends Component {
                         <flux:table.cell><x-usdt :micros="$investment->earnedSoFar()" :decimals="4" /></flux:table.cell>
                         <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
                         <flux:table.cell align="end">
-                            @if ($investment->status === InvestmentStatus::Active)
+                            @if ($investment->status === InvestmentStatus::Active && $canManageMoney)
                                 <div class="flex justify-end gap-2">
                                     <flux:button size="sm" wire:click="settle({{ $investment->id }})" wire:confirm="{{ __('Pay out the principal and earnings so far?') }}">{{ __('Settle') }}</flux:button>
                                     <flux:button size="sm" variant="danger" wire:click="cancel({{ $investment->id }})" wire:confirm="{{ __('Cancel and return only the principal?') }}">{{ __('Cancel') }}</flux:button>

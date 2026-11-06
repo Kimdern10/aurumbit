@@ -8,6 +8,7 @@ use App\Services\WalletService;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -54,6 +55,8 @@ new #[Title('Withdrawals')] class extends Component {
 
     public function review(int $withdrawalId, string $decision, BybitAccount $bybit): void
     {
+        Gate::authorize('manage-money');
+
         $this->reviewingId = $withdrawalId;
         $this->decision = $decision === 'reject' ? 'reject' : 'approve';
         $this->note = '';
@@ -84,6 +87,8 @@ new #[Title('Withdrawals')] class extends Component {
 
     public function confirm(WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $withdrawal = Withdrawal::query()->findOrFail($this->reviewingId);
         $this->payoutTxid = $withdrawal->network->normalizeTxid($this->payoutTxid);
 
@@ -115,6 +120,8 @@ new #[Title('Withdrawals')] class extends Component {
     }
 };
 ?>
+
+@php($canManageMoney = auth()->user()->can('manage-money'))
 
 <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
@@ -168,7 +175,7 @@ new #[Title('Withdrawals')] class extends Component {
                             @if ($withdrawal->admin_note) <p class="mt-1 max-w-48 truncate text-xs text-zinc-500">{{ $withdrawal->admin_note }}</p> @endif
                         </flux:table.cell>
                         <flux:table.cell align="end">
-                            @if ($withdrawal->status === RequestStatus::Pending)
+                            @if ($withdrawal->status === RequestStatus::Pending && $canManageMoney)
                                 <div class="flex justify-end gap-2">
                                     <flux:button size="sm" variant="primary" wire:click="review({{ $withdrawal->id }}, 'approve')">{{ __('Approve') }}</flux:button>
                                     <flux:button size="sm" variant="danger" wire:click="review({{ $withdrawal->id }}, 'reject')">{{ __('Reject') }}</flux:button>

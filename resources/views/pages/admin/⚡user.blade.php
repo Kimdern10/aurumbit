@@ -9,6 +9,7 @@ use App\Support\Usdt;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -46,6 +47,8 @@ new #[Title('User')] class extends Component {
 
     public function adjust(WalletService $wallet): void
     {
+        Gate::authorize('manage-money');
+
         $this->validate([
             'adjustAmount' => ['required', 'regex:/^-?\d{1,9}(\.\d{1,2})?$/'],
             'adjustReason' => ['required', 'string', 'min:5', 'max:200'],
@@ -72,6 +75,8 @@ new #[Title('User')] class extends Component {
 
     public function openBlock(string $action): void
     {
+        Gate::authorize('manage-money');
+
         $this->blockAction = $action === 'ban' ? 'ban' : 'suspend';
         $this->reset('suspendFor', 'blockReason');
         $this->resetValidation();
@@ -83,6 +88,8 @@ new #[Title('User')] class extends Component {
      */
     public function block(): void
     {
+        Gate::authorize('manage-money');
+
         abort_if($this->user->is(Auth::user()), 422, 'You cannot suspend or ban yourself.');
 
         $this->validate([
@@ -108,12 +115,16 @@ new #[Title('User')] class extends Component {
 
     public function restore(): void
     {
+        Gate::authorize('manage-money');
+
         $this->user->restore();
         $this->user->notify(new AccountActivity('Account restored', 'Your account is active again. You can sign in as usual.', route('dashboard'), 'success'));
         Flux::toast(variant: 'success', text: __('User restored. They can sign in again.'));
     }
 };
 ?>
+
+@php($canManageMoney = auth()->user()->can('manage-money'))
 
 <div class="space-y-6">
     <div class="flex flex-wrap items-start justify-between gap-4">
@@ -128,7 +139,7 @@ new #[Title('User')] class extends Component {
                 <x-account-status-badge :user="$user" />
             </div>
         </div>
-        @unless ($user->is(auth()->user()))
+        @if (! $user->is(auth()->user()) && $canManageMoney)
             <div class="flex flex-wrap gap-2">
                 @if ($user->isBlocked())
                     <flux:button wire:click="restore" wire:confirm="{{ __('Lift the :status and let this user sign in again?', ['status' => $user->isBanned() ? __('ban') : __('suspension')]) }}" variant="primary" icon="lock-open">{{ __('Restore user') }}</flux:button>
@@ -137,7 +148,7 @@ new #[Title('User')] class extends Component {
                     <flux:button wire:click="openBlock('ban')" variant="danger" icon="no-symbol">{{ __('Ban') }}</flux:button>
                 @endif
             </div>
-        @endunless
+        @endif
     </div>
 
     @if ($user->isBlocked())
@@ -162,17 +173,19 @@ new #[Title('User')] class extends Component {
     </div>
 
     <div class="grid gap-6 xl:grid-cols-3">
-        <flux:card>
-            <form wire:submit="adjust" class="space-y-4">
-                <flux:heading>{{ __('Adjust balance') }}</flux:heading>
-                <flux:text class="text-sm">{{ __('The customer sees this as a "Balance adjustment" with the description below. Your name is kept in the admin audit log only.') }}</flux:text>
-                <flux:input wire:model="adjustAmount" :label="__('Amount (USDT)')" placeholder="50 or -50" inputmode="decimal" />
-                <flux:input wire:model="adjustReason" :label="__('Description the customer sees')" :placeholder="__('e.g. Welcome bonus')" />
-                <flux:button type="submit" variant="primary">{{ __('Apply adjustment') }}</flux:button>
-            </form>
-        </flux:card>
+        @if ($canManageMoney)
+            <flux:card>
+                <form wire:submit="adjust" class="space-y-4">
+                    <flux:heading>{{ __('Adjust balance') }}</flux:heading>
+                    <flux:text class="text-sm">{{ __('The customer sees this as a "Balance adjustment" with the description below. Your name is kept in the admin audit log only.') }}</flux:text>
+                    <flux:input wire:model="adjustAmount" :label="__('Amount (USDT)')" placeholder="50 or -50" inputmode="decimal" />
+                    <flux:input wire:model="adjustReason" :label="__('Description the customer sees')" :placeholder="__('e.g. Welcome bonus')" />
+                    <flux:button type="submit" variant="primary">{{ __('Apply adjustment') }}</flux:button>
+                </form>
+            </flux:card>
+        @endif
 
-        <flux:card class="!p-0 overflow-hidden xl:col-span-2">
+        <flux:card class="!p-0 overflow-hidden {{ $canManageMoney ? 'xl:col-span-2' : 'xl:col-span-3' }}">
             <div class="px-4 pt-4"><flux:heading>{{ __('Recent balance changes') }}</flux:heading></div>
             <flux:table :paginate="$this->entries" class="[&_td]:px-4! [&_th]:px-4!">
                 <flux:table.columns>

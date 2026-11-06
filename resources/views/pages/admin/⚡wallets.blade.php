@@ -4,6 +4,7 @@ use App\Models\DepositWallet;
 use App\Rules\BitcoinAddress;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -14,6 +15,14 @@ use Livewire\WithPagination;
 
 new #[Title('Deposit wallets')] class extends Component {
     use WithFileUploads, WithPagination;
+
+    /**
+     * Only owners may open this page or use its actions.
+     */
+    public function boot(): void
+    {
+        Gate::authorize('manage-money');
+    }
 
     public ?int $editingId = null;
 

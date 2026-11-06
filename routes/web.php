@@ -52,6 +52,8 @@ Route::middleware(['auth', 'verified', 'admin', CatchUpInvestments::class])->pre
     Route::livewire('support/{ticket}', 'pages::admin.ticket')->name('tickets.show');
     Route::livewire('audit-log', 'pages::admin.ledger')->name('ledger');
     Route::livewire('settings', 'pages::admin.settings')->name('settings');
+    Route::livewire('sign-ins', 'pages::admin.sign-ins')->name('sign-ins');
+    Route::livewire('backups', 'pages::admin.backups')->name('backups');
 });
 
 require __DIR__.'/settings.php';

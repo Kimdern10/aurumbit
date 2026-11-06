@@ -3,10 +3,19 @@
 use App\Models\Setting;
 use App\Support\Usdt;
 use Flux\Flux;
+use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Title;
 use Livewire\Component;
 
 new #[Title('Site settings')] class extends Component {
+    /**
+     * Only owners may open this page or use its actions.
+     */
+    public function boot(): void
+    {
+        Gate::authorize('manage-money');
+    }
+
     public string $siteName = '';
 
     public string $tagline = '';

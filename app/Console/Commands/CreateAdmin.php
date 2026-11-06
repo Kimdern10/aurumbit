@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Concerns\PasswordValidationRules;
+use App\Enums\AdminRole;
 use App\Models\User;
 use Illuminate\Console\Attributes\Description;
 use Illuminate\Console\Attributes\Signature;
@@ -12,7 +13,7 @@ use Illuminate\Support\Facades\Validator;
 use function Laravel\Prompts\password;
 use function Laravel\Prompts\text;
 
-#[Signature('app:create-admin {--name= : The admin\'s name} {--email= : The email used to log in} {--password= : The password (you will be asked if left out)}')]
+#[Signature('app:create-admin {--name= : The admin\'s name} {--email= : The email used to log in} {--password= : The password (you will be asked if left out)} {--role=owner : owner (full access) or support (cannot move money or change settings)}')]
 #[Description('Create an admin login, or make an existing user an admin')]
 class CreateAdmin extends Command
 {
@@ -23,6 +24,14 @@ class CreateAdmin extends Command
      */
     public function handle(): int
     {
+        $role = AdminRole::tryFrom((string) $this->option('role'));
+
+        if ($role === null) {
+            $this->components->error('The role must be "owner" or "support".');
+
+            return self::FAILURE;
+        }
+
         $email = $this->option('email') ?: text('Email address to log in with', required: true);
         $user = User::query()->where('email', strtolower($email))->first();
 
@@ -49,6 +58,7 @@ class CreateAdmin extends Command
             'email' => strtolower($email),
             'password' => $password,
             'is_admin' => true,
+            'admin_role' => $role,
             'email_verified_at' => $user->email_verified_at ?? now(),
         ])->save();
 
