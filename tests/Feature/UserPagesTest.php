@@ -8,8 +8,10 @@ use App\Models\Investment;
 use App\Models\KycSubmission;
 use App\Models\Plan;
 use App\Models\User;
+use App\Notifications\WithdrawalCodeNotification;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\Notification;
 use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
@@ -139,11 +141,15 @@ test('a verified user can request a USDT withdrawal on TRC20 or ERC20', function
     $user = User::factory()->withBalance(1_000_000_000)->create();
     KycSubmission::factory()->approved()->for($user)->create();
 
+    Notification::fake();
+
     Livewire::actingAs($user)->test('pages::withdraw')
         ->set('amount', '400')
         ->set('network', $network)
         ->set('address', ' '.$address.' ')
         ->set('confirmAddress', true)
+        ->call('sendCode')
+        ->set('securityCode', lastWithdrawalCode($user))
         ->call('save')
         ->assertHasNoErrors();
 
@@ -160,11 +166,15 @@ test('withdrawals to an invalid address, the wrong network or above the balance 
     $user = User::factory()->withBalance(1_000_000_000)->create();
     KycSubmission::factory()->approved()->for($user)->create();
 
+    Notification::fake();
+
     Livewire::actingAs($user)->test('pages::withdraw')
         ->set('amount', $amount)
         ->set('network', $network)
         ->set('address', $address)
         ->set('confirmAddress', true)
+        ->call('sendCode')
+        ->set('securityCode', lastWithdrawalCode($user))
         ->call('save')
         ->assertHasErrors($errorField);
 
@@ -241,3 +251,11 @@ test('a suspended user is logged out', function () {
     $this->actingAs($user)->get(route('dashboard'))->assertRedirect(route('login'));
     $this->assertGuest();
 });
+
+/**
+ * The withdrawal code most recently emailed to the user (with notifications faked).
+ */
+function lastWithdrawalCode(User $user): string
+{
+    return collect(Notification::sent($user, WithdrawalCodeNotification::class))->last()->code;
+}

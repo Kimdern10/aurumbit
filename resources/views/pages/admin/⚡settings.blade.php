@@ -21,6 +21,8 @@ new #[Title('Site settings')] class extends Component {
 
     public string $minWithdrawal = '';
 
+    public string $dailyWithdrawalLimit = '';
+
     public bool $withdrawalRequiresKyc = true;
 
     public string $referralBonusPercent = '';
@@ -34,6 +36,7 @@ new #[Title('Site settings')] class extends Component {
         $this->companyDetails = Setting::get('company_details');
         $this->minDeposit = str_replace(',', '', Usdt::format(Setting::integer('min_deposit_micros')));
         $this->minWithdrawal = str_replace(',', '', Usdt::format(Setting::integer('min_withdrawal_micros')));
+        $this->dailyWithdrawalLimit = Setting::integer('daily_withdrawal_limit_micros') > 0 ? str_replace(',', '', Usdt::format(Setting::integer('daily_withdrawal_limit_micros'))) : '';
         $this->withdrawalRequiresKyc = Setting::enabled('withdrawal_requires_kyc');
         $this->referralBonusPercent = rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2, '.', ''), '0'), '.');
     }
@@ -48,6 +51,7 @@ new #[Title('Site settings')] class extends Component {
             'companyDetails' => ['nullable', 'string', 'max:500'],
             'minDeposit' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
             'minWithdrawal' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
+            'dailyWithdrawalLimit' => ['nullable', 'regex:'.Usdt::INPUT_PATTERN],
             'withdrawalRequiresKyc' => ['boolean'],
             'referralBonusPercent' => ['required', 'regex:/^\d{1,2}(\.\d{1,2})?$/'],
         ]);
@@ -62,6 +66,7 @@ new #[Title('Site settings')] class extends Component {
             'company_details' => $validated['companyDetails'],
             'min_deposit_micros' => Usdt::toMicros($validated['minDeposit']),
             'min_withdrawal_micros' => Usdt::toMicros($validated['minWithdrawal']),
+            'daily_withdrawal_limit_micros' => filled($validated['dailyWithdrawalLimit']) ? Usdt::toMicros($validated['dailyWithdrawalLimit']) : 0,
             'withdrawal_requires_kyc' => $validated['withdrawalRequiresKyc'],
             'referral_bonus_bps' => (int) $whole * 100 + (int) str_pad($fraction, 2, '0'),
         ]);
@@ -97,6 +102,7 @@ new #[Title('Site settings')] class extends Component {
             <div class="grid gap-4 sm:grid-cols-3">
                 <flux:input wire:model="minDeposit" :label="__('Minimum deposit (USDT)')" inputmode="decimal" :description="__('Checked at today\'s price for coins we have a price for.')" />
                 <flux:input wire:model="minWithdrawal" :label="__('Minimum withdrawal (USDT)')" inputmode="decimal" />
+                <flux:input wire:model="dailyWithdrawalLimit" :label="__('Daily withdrawal limit per user (USDT)')" inputmode="decimal" :placeholder="__('No limit')" :description="__('Leave empty for no limit.')" />
                 <flux:input wire:model="referralBonusPercent" :label="__('Referral bonus (%)')" inputmode="decimal" />
             </div>
             <flux:switch wire:model="withdrawalRequiresKyc" :label="__('Require verified identity before withdrawals')" />

@@ -63,7 +63,7 @@ test('every money event creates an account notification with the reference numbe
 
     $sent = collect(Notification::sent($user, AccountActivity::class));
 
-    expect($sent->pluck('title')->all())->toBe(['Deposit received', 'Withdrawal requested', 'Plan started', 'Wallet debited'])
+    expect($sent->pluck('title')->all())->toBe(['Deposit received', 'Withdrawal requested', 'New withdrawal address used', 'Plan started', 'Wallet debited'])
         ->and($sent->firstWhere('title', 'Deposit received')->body)->toContain($deposit->code())
         ->and($sent->firstWhere('title', 'Withdrawal requested')->body)->toContain($withdrawal->code());
 });

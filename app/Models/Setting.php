@@ -32,6 +32,7 @@ class Setting extends Model
         'seo_description' => 'Hashvale offers fixed-term Bitcoin, gold, Ethereum and Solana plans with clear rates, a returns calculator and a full transaction history.',
         'min_deposit_micros' => '10000000',
         'min_withdrawal_micros' => '10000000',
+        'daily_withdrawal_limit_micros' => '0',
         'withdrawal_requires_kyc' => '1',
         'referral_bonus_bps' => '100',
         'company_details' => '',

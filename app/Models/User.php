@@ -28,6 +28,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $email
  * @property CarbonInterface|null $email_verified_at
  * @property string $password
+ * @property CarbonInterface|null $password_changed_at
  * @property bool $is_admin
  * @property bool $is_suspended
  * @property CarbonInterface|null $suspended_until
@@ -74,6 +75,12 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
             }
         });
 
+        static::updating(function (User $user): void {
+            if ($user->isDirty('password')) {
+                $user->password_changed_at = now();
+            }
+        });
+
         // Identity documents are personal data: remove them with the account.
         static::deleting(function (User $user): void {
             Storage::disk('local')->deleteDirectory('kyc/'.$user->id);
@@ -90,6 +97,7 @@ class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'password_changed_at' => 'datetime',
             'is_admin' => 'boolean',
             'is_suspended' => 'boolean',
             'suspended_until' => 'datetime',

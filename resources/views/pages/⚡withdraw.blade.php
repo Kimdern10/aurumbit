@@ -7,6 +7,7 @@ use App\Models\Withdrawal;
 use App\Rules\UsdtAddress;
 use App\Services\WalletService;
 use App\Support\Usdt;
+use App\Support\WithdrawalCode;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -27,6 +28,32 @@ new #[Title('Withdraw')] class extends Component {
     public string $address = '';
 
     public bool $confirmAddress = false;
+
+    /**
+     * The authenticator code, or the code emailed to the user, that confirms the withdrawal.
+     */
+    public string $securityCode = '';
+
+    public bool $codeSent = false;
+
+    /**
+     * Email a withdrawal code, at most once a minute (users without two-step login).
+     */
+    public function sendCode(): void
+    {
+        $key = 'withdrawal-code-send:'.Auth::id();
+
+        if (RateLimiter::tooManyAttempts($key, 1)) {
+            $this->addError('securityCode', __('Please wait :seconds seconds before asking for another code.', ['seconds' => RateLimiter::availableIn($key)]));
+
+            return;
+        }
+
+        RateLimiter::hit($key, 60);
+        WithdrawalCode::send(Auth::user());
+        $this->codeSent = true;
+        $this->resetErrorBag('securityCode');
+    }
 
     /**
      * @return LengthAwarePaginator<int, Withdrawal>
@@ -73,9 +100,12 @@ new #[Title('Withdraw')] class extends Component {
             'network' => ['required', Rule::in(array_map(fn (WithdrawalNetwork $network): string => $network->value, WithdrawalNetwork::selectable()))],
             'address' => ['required', 'string', 'max:100', new UsdtAddress($this->selectedNetwork)],
             'confirmAddress' => ['accepted'],
+            'securityCode' => ['required', 'regex:/^\s*\d{3}\s?\d{3}\s*$/'],
         ], [
             'amount.regex' => __('Enter an amount in USDT, with up to 2 decimal places.'),
             'confirmAddress.accepted' => __('Please confirm the address is yours and correct.'),
+            'securityCode.required' => WithdrawalCode::usesAuthenticator(Auth::user()) ? __('Enter the 6-digit code from your authenticator app.') : __('Enter the 6-digit code we emailed you.'),
+            'securityCode.regex' => __('The code has 6 digits.'),
         ]);
 
         $key = 'withdraw:'.Auth::id();
@@ -88,6 +118,15 @@ new #[Title('Withdraw')] class extends Component {
 
         RateLimiter::hit($key, 600);
 
+        if (! WithdrawalCode::verify(Auth::user(), $this->securityCode)) {
+            $this->reset('securityCode');
+            $this->addError('securityCode', WithdrawalCode::usesAuthenticator(Auth::user())
+                ? __('That authenticator code is not right. Codes change every 30 seconds.')
+                : __('That code is not right or has expired. Send a new code.'));
+
+            return;
+        }
+
         try {
             $wallet->requestWithdrawal(Auth::user(), (int) Usdt::toMicros($this->amount), $this->selectedNetwork, $this->address);
         } catch (WalletException $exception) {
@@ -96,7 +135,7 @@ new #[Title('Withdraw')] class extends Component {
             return;
         }
 
-        $this->reset('amount', 'address', 'confirmAddress');
+        $this->reset('amount', 'address', 'confirmAddress', 'securityCode', 'codeSent');
         $this->resetPage();
         Flux::toast(variant: 'success', text: __('Withdrawal requested. The amount is on hold until an admin reviews it.'));
     }
@@ -142,6 +181,23 @@ new #[Title('Withdraw')] class extends Component {
                     <flux:label class="text-sm leading-snug">{{ __('This address belongs to me, it is on the network I chose, and I have checked every character. Crypto sent to a wrong address or network cannot be recovered.') }}</flux:label>
                     <flux:error name="confirmAddress" />
                 </flux:field>
+
+                <div class="space-y-2 rounded-xl border border-zinc-200 p-4 dark:border-white/10" data-withdrawal-security>
+                    <p class="flex items-center gap-2 text-sm font-medium text-zinc-900 dark:text-white"><flux:icon.shield-check variant="mini" class="text-brand-600" /> {{ __('Confirm it\'s you') }}</p>
+                    @if (WithdrawalCode::usesAuthenticator(auth()->user()))
+                        <flux:input wire:model="securityCode" :label="__('Code from your authenticator app')" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" class="font-mono" />
+                    @else
+                        <div class="flex flex-wrap items-end gap-2">
+                            <flux:input wire:model="securityCode" :label="__('6-digit code sent to :email', ['email' => auth()->user()->email])" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" class="min-w-0 flex-1 font-mono" />
+                            <flux:button type="button" wire:click="sendCode" icon="envelope">{{ $codeSent ? __('Send again') : __('Email me a code') }}</flux:button>
+                        </div>
+                        @if ($codeSent)
+                            <flux:text class="text-xs text-green-700 dark:text-green-400">{{ __('Code sent. It works for :minutes minutes.', ['minutes' => WithdrawalCode::MINUTES_VALID]) }}</flux:text>
+                        @endif
+                        <flux:text class="text-xs">{{ __('Tip: turn on two-step login in Settings to use your authenticator app instead.') }}</flux:text>
+                    @endif
+                </div>
+
                 <flux:button type="submit" variant="primary">{{ __('Request withdrawal') }}</flux:button>
             </form>
         </flux:card>

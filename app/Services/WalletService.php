@@ -34,6 +34,12 @@ use Illuminate\Support\Facades\DB;
  */
 class WalletService
 {
+    /**
+     * Withdrawals are paused for this long after a password change, in case
+     * someone else changed it.
+     */
+    public const int PASSWORD_CHANGE_HOLD_HOURS = 24;
+
     public function __construct(private MarketPrices $prices) {}
 
     /**
@@ -130,8 +136,16 @@ class WalletService
             throw new WalletException('Please verify your identity before withdrawing.');
         }
 
+        if ($user->password_changed_at !== null && $user->password_changed_at->gt(now()->subHours(self::PASSWORD_CHANGE_HOLD_HOURS))) {
+            throw new WalletException('For your safety, withdrawals are paused for 24 hours after a password change. You can withdraw again '.$user->password_changed_at->copy()->addHours(self::PASSWORD_CHANGE_HOLD_HOURS)->diffForHumans().'.');
+        }
+
         return DB::transaction(function () use ($user, $amountMicros, $network, $address, $quote): Withdrawal {
             $locked = $this->lockUser($user->id);
+
+            $this->ensureWithinDailyLimit($locked, $amountMicros);
+
+            $isNewAddress = ! $locked->withdrawals()->where('address', trim($address))->exists();
 
             $withdrawal = $locked->withdrawals()->create([
                 'amount_micros' => $amountMicros,
@@ -148,8 +162,34 @@ class WalletService
 
             $locked->notify(new AccountActivity('Withdrawal requested', 'Your withdrawal of '.$withdrawal->payoutLabel().' to '.$withdrawal->network->label().' (reference '.$withdrawal->code().') is waiting for review. The amount is on hold from your balance.', $withdrawal->receiptUrl()));
 
+            if ($isNewAddress) {
+                $locked->notify(new AccountActivity('New withdrawal address used', 'A withdrawal was requested to an address you have not used before: '.$withdrawal->address.' ('.$withdrawal->network->label().'). If this was not you, contact support right away and change your password.', $withdrawal->receiptUrl(), 'danger'));
+            }
+
             return $withdrawal;
         });
+    }
+
+    /**
+     * Refuse a withdrawal that would take today's total above the admin's daily limit.
+     * Rejected withdrawals do not count. A limit of 0 means no limit.
+     */
+    private function ensureWithinDailyLimit(User $user, int $amountMicros): void
+    {
+        $limit = Setting::integer('daily_withdrawal_limit_micros');
+
+        if ($limit <= 0) {
+            return;
+        }
+
+        $usedToday = (int) $user->withdrawals()
+            ->where('created_at', '>=', now()->startOfDay())
+            ->where('status', '!=', RequestStatus::Rejected)
+            ->sum('amount_micros');
+
+        if ($usedToday + $amountMicros > $limit) {
+            throw new WalletException('This is over the daily withdrawal limit of '.Usdt::format($limit).' USDT. You can still withdraw '.Usdt::format(max(0, $limit - $usedToday)).' USDT today.');
+        }
     }
 
     /**
