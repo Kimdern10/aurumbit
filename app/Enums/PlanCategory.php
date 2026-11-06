@@ -134,11 +134,11 @@ enum PlanCategory: string
     public function description(): string
     {
         return match ($this) {
-            self::Usdt => 'Stable fixed-term plans in USDT, with no price swings on your capital.',
-            self::Bitcoin => 'Fixed-term Bitcoin plans with a set rate. Withdraw in BTC or USDT.',
+            self::Usdt => 'Fixed-term plans in USDT with a target rate (not guaranteed).',
+            self::Bitcoin => 'Fixed-term Bitcoin plans with a target rate (not guaranteed). Withdraw in BTC or USDT.',
             self::Gold => 'Fixed-term plans that show the gold value of your plan at today\'s price.',
-            self::Ethereum => 'Fixed-term Ethereum plans with a set rate. Withdraw in ETH or USDT.',
-            self::Solana => 'Fixed-term Solana plans with a set rate. Withdraw in SOL or USDT.',
+            self::Ethereum => 'Fixed-term Ethereum plans with a target rate (not guaranteed). Withdraw in ETH or USDT.',
+            self::Solana => 'Fixed-term Solana plans with a target rate (not guaranteed). Withdraw in SOL or USDT.',
             self::CryptoIndex => 'Fixed-term plans across the crypto range, paid in the coin you choose.',
         };
     }

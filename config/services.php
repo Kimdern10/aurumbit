@@ -54,4 +54,13 @@ return [
         'base_url' => env('BYBIT_API_URL', 'https://api.bybit.com'),
     ],
 
+    /*
+     * Daily database backups (app:backup-database). Set BACKUP_DISK to a
+     * cloud disk such as "s3" to keep copies away from this server.
+     */
+    'backups' => [
+        'disk' => env('BACKUP_DISK', 'local'),
+        'keep' => (int) env('BACKUP_KEEP', 14),
+    ],
+
 ];

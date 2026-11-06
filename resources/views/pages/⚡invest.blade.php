@@ -124,8 +124,12 @@ new #[Title('Plans')] class extends Component {
         <flux:text class="mt-1">{{ __('Available balance:') }} <x-usdt :micros="auth()->user()->balance_micros" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
     </div>
 
-    <flux:callout color="blue" icon="information-circle">
-        <flux:callout.text>{{ __('Earnings build up every day at the plan rate and are paid with your capital at the end of the term.') }}</flux:callout.text>
+    <flux:callout color="amber" icon="exclamation-triangle" data-risk-notice>
+        <flux:callout.heading>{{ __('Rates are targets, not guarantees') }}</flux:callout.heading>
+        <flux:callout.text>
+            {{ __('Earnings build up every day at the plan\'s target rate and are paid with your capital at the end of the term. Crypto-asset plans carry risk: you could earn less than the target or lose money. Only invest what you can afford to lose.') }}
+            <flux:link :href="route('legal.risk')" wire:navigate>{{ __('Read the risk disclosure') }}</flux:link>
+        </flux:callout.text>
     </flux:callout>
 
     @if ($this->plans->isNotEmpty())
@@ -221,7 +225,7 @@ new #[Title('Plans')] class extends Component {
 
                 <flux:field variant="inline">
                     <flux:checkbox wire:model="acceptRisk" />
-                    <flux:label class="text-sm leading-snug">{{ __('I understand my money stays in this plan until the end of the term.') }}</flux:label>
+                    <flux:label class="text-sm leading-snug">{{ __('I understand the rate is a target, not a guarantee, and my money stays in this plan until the end of the term.') }}</flux:label>
                     <flux:error name="acceptRisk" />
                 </flux:field>
 

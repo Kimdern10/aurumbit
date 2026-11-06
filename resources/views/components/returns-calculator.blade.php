@@ -66,6 +66,6 @@
         </dl>
 
         <p data-calc-summary @class(['mt-4 text-sm', 'text-zinc-300' => $dark, 'text-zinc-600 dark:text-zinc-300' => ! $dark])></p>
-        <p @class(['mt-2 text-[11px]', 'text-zinc-400' => $dark, 'text-zinc-500' => ! $dark])>{{ __('Figures use the plan rate. Your capital and profit are paid together at the end of the term.') }}</p>
+        <p @class(['mt-2 text-[11px]', 'text-zinc-400' => $dark, 'text-zinc-500' => ! $dark])>{{ __('Estimates based on the plan\'s target rate. They are not guaranteed: you could earn less or lose money. Capital and profit are paid together at the end of the term.') }} <a href="{{ route('legal.risk') }}" class="underline" wire:navigate>{{ __('Risk disclosure') }}</a></p>
     </div>
 @endif

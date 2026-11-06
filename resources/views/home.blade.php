@@ -177,6 +177,7 @@
             <div data-reveal class="max-w-2xl">
                 <p class="text-sm font-semibold text-brand-600 dark:text-brand-400">{{ __('Plans') }}</p>
                 <h2 class="mt-2 font-display text-4xl font-extrabold text-ink-950 sm:text-5xl dark:text-white">{{ __('Choose your plan') }}</h2>
+                <p class="mt-4 text-sm text-ink-500 dark:text-ink-400" data-risk-notice>{{ __('Rates shown are targets, not guarantees. Crypto-asset plans carry risk and you could lose money.') }} <a href="{{ route('legal.risk') }}" wire:navigate class="font-medium underline">{{ __('Risk disclosure') }}</a></p>
             </div>
 
             @foreach (PlanCategory::cases() as $category)
@@ -199,7 +200,7 @@
 
                                 <p class="mt-6 flex items-baseline gap-2">
                                     <span class="font-display text-5xl font-extrabold text-ink-950 dark:text-white">{{ $plan->targetPercent() }}%</span>
-                                    <span class="text-sm text-ink-500">{{ __('in :days days', ['days' => $plan->duration_days]) }}</span>
+                                    <span class="text-sm text-ink-500">{{ __('target in :days days', ['days' => $plan->duration_days]) }}</span>
                                 </p>
                                 <p class="text-sm text-brand-600 dark:text-brand-400">{{ __(':rate% a day', ['rate' => $plan->dailyPercent()]) }}</p>
 

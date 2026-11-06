@@ -14,8 +14,8 @@ use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 test('every user page opens without any demo wording', function (string $route) {
-    $user = User::factory()->withBalance(1_000_000)->create();
-    Investment::factory()->for($user)->create();
+    $user = User::factory()->withBalance(1_000_000)->create(['name' => 'Ada Lovelace']);
+    Investment::factory()->for($user)->for(Plan::factory()->state(['name' => 'Growth Plan', 'summary' => 'A plan with a target rate.']))->create();
 
     $this->actingAs($user)->get(route($route))
         ->assertOk()
