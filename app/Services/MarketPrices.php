@@ -79,6 +79,21 @@ class MarketPrices
     }
 
     /**
+     * The cached US dollar price of one asset in cents, e.g. priceCents('btc'),
+     * or null when the asset is unknown or has no price yet.
+     */
+    public function priceCents(string $asset): ?int
+    {
+        return match ($asset) {
+            'btc' => $this->cached()['btc_cents'],
+            'eth' => $this->cached()['eth_cents'],
+            'sol' => $this->cached()['sol_cents'],
+            'gold' => $this->cached()['gold_cents'],
+            default => null,
+        };
+    }
+
+    /**
      * How many milligrams of gold an amount of USDT would buy at current prices.
      */
     public function goldMilligrams(int $micros): ?int

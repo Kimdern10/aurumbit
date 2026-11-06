@@ -185,9 +185,9 @@ class WalletService
             return ['coin_amount' => null, 'price_cents' => null];
         }
 
-        $priceCents = $this->prices->cached()[$network->priceKey().'_cents'] ?? null;
+        $priceCents = $this->prices->priceCents($network->priceKey() ?? '');
 
-        if (! $priceCents) {
+        if ($priceCents === null || $priceCents <= 0) {
             throw new WalletException('The live '.$network->coin().' price is not available right now. Please try again in a minute or withdraw in USDT.');
         }
 
