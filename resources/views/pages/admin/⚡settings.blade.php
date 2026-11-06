@@ -34,6 +34,12 @@ new #[Title('Site settings')] class extends Component {
 
     public bool $withdrawalRequiresKyc = true;
 
+    public bool $autoCreditDeposits = false;
+
+    public bool $autoCreditCrypto = false;
+
+    public string $autoCreditMax = '';
+
     public string $referralBonusPercent = '';
 
     public function mount(): void
@@ -47,6 +53,9 @@ new #[Title('Site settings')] class extends Component {
         $this->minWithdrawal = str_replace(',', '', Usdt::format(Setting::integer('min_withdrawal_micros')));
         $this->dailyWithdrawalLimit = Setting::integer('daily_withdrawal_limit_micros') > 0 ? str_replace(',', '', Usdt::format(Setting::integer('daily_withdrawal_limit_micros'))) : '';
         $this->withdrawalRequiresKyc = Setting::enabled('withdrawal_requires_kyc');
+        $this->autoCreditDeposits = Setting::enabled('auto_credit_deposits');
+        $this->autoCreditCrypto = Setting::enabled('auto_credit_crypto');
+        $this->autoCreditMax = Setting::integer('auto_credit_max_micros') > 0 ? str_replace(',', '', Usdt::format(Setting::integer('auto_credit_max_micros'))) : '';
         $this->referralBonusPercent = rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2, '.', ''), '0'), '.');
     }
 
@@ -62,6 +71,9 @@ new #[Title('Site settings')] class extends Component {
             'minWithdrawal' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
             'dailyWithdrawalLimit' => ['nullable', 'regex:'.Usdt::INPUT_PATTERN],
             'withdrawalRequiresKyc' => ['boolean'],
+            'autoCreditDeposits' => ['boolean'],
+            'autoCreditCrypto' => ['boolean'],
+            'autoCreditMax' => ['nullable', 'regex:'.Usdt::INPUT_PATTERN],
             'referralBonusPercent' => ['required', 'regex:/^\d{1,2}(\.\d{1,2})?$/'],
         ]);
 
@@ -77,6 +89,9 @@ new #[Title('Site settings')] class extends Component {
             'min_withdrawal_micros' => Usdt::toMicros($validated['minWithdrawal']),
             'daily_withdrawal_limit_micros' => filled($validated['dailyWithdrawalLimit']) ? Usdt::toMicros($validated['dailyWithdrawalLimit']) : 0,
             'withdrawal_requires_kyc' => $validated['withdrawalRequiresKyc'],
+            'auto_credit_deposits' => $validated['autoCreditDeposits'],
+            'auto_credit_crypto' => $validated['autoCreditCrypto'],
+            'auto_credit_max_micros' => filled($validated['autoCreditMax']) ? Usdt::toMicros($validated['autoCreditMax']) : 0,
             'referral_bonus_bps' => (int) $whole * 100 + (int) str_pad($fraction, 2, '0'),
         ]);
 
@@ -115,6 +130,21 @@ new #[Title('Site settings')] class extends Component {
                 <flux:input wire:model="referralBonusPercent" :label="__('Referral bonus (%)')" inputmode="decimal" />
             </div>
             <flux:switch wire:model="withdrawalRequiresKyc" :label="__('Require verified identity before withdrawals')" />
+        </flux:card>
+
+        <flux:card class="space-y-4" data-auto-credit-settings>
+            <div>
+                <flux:heading>{{ __('Auto-credit deposits') }}</flux:heading>
+                <flux:text class="mt-1 text-sm">{{ __('Every two minutes, pending deposits are checked against your Bybit account. A deposit is credited without an admin only when Bybit shows the same transaction ID, coin and amount, finished, at the address the user picked. Anything else waits for review as usual.') }}</flux:text>
+            </div>
+            @unless (app(\App\Services\BybitAccount::class)->isConfigured())
+                <flux:callout color="amber" icon="exclamation-triangle">
+                    <flux:callout.text>{{ __('Bybit is not connected (BYBIT_API_KEY in .env), so nothing will be credited automatically.') }}</flux:callout.text>
+                </flux:callout>
+            @endunless
+            <flux:switch wire:model="autoCreditDeposits" :label="__('Credit confirmed deposits automatically')" />
+            <flux:switch wire:model="autoCreditCrypto" :label="__('Also BTC, ETH and SOL at the live price')" :description="__('Off: only USDT and USDC are credited automatically (1 coin = 1 USDT). Other coins wait for an admin.')" />
+            <flux:input wire:model="autoCreditMax" :label="__('Largest deposit to credit automatically (USDT)')" inputmode="decimal" :placeholder="__('No limit')" :description="__('Bigger deposits wait for an admin. Leave empty for no limit.')" class="sm:max-w-xs" />
         </flux:card>
 
         <flux:button type="submit" variant="primary">{{ __('Save settings') }}</flux:button>

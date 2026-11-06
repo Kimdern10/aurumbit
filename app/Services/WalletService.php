@@ -80,22 +80,23 @@ class WalletService
 
     /**
      * Credit a checked deposit. The admin confirms how much USDT it is worth;
-     * the deposit page suggests the amount at today's price.
+     * the deposit page suggests the amount at today's price. With no admin, the
+     * deposit was credited automatically after Bybit confirmed it.
      */
-    public function approveDeposit(Deposit $deposit, User $admin, int $creditMicros): void
+    public function approveDeposit(Deposit $deposit, ?User $admin, int $creditMicros, ?string $note = null): void
     {
         if ($creditMicros <= 0) {
             throw new WalletException('Enter the USDT amount to credit.');
         }
 
-        DB::transaction(function () use ($deposit, $admin, $creditMicros): void {
+        DB::transaction(function () use ($deposit, $admin, $creditMicros, $note): void {
             $deposit = $this->lockPendingDeposit($deposit->id);
             $user = $this->lockUser($deposit->user_id);
 
             $deposit->credited_micros = $creditMicros;
 
             $this->apply($user, $creditMicros, LedgerType::Deposit, 'Deposit '.$deposit->code().' credited ('.$deposit->coinLabel().')', $deposit, $admin);
-            $this->markReviewed($deposit, RequestStatus::Approved, $admin);
+            $this->markReviewed($deposit, RequestStatus::Approved, $admin, $note);
 
             $user->notify(new AccountActivity('Deposit credited', 'Your '.$deposit->coinLabel().' deposit was credited as '.Usdt::format($creditMicros).' USDT.', $deposit->receiptUrl(), 'success'));
 
@@ -412,7 +413,7 @@ class WalletService
     /**
      * Pay the referrer a share of the first approved deposit of someone they invited.
      */
-    private function payReferralBonus(User $user, Deposit $deposit, User $admin): void
+    private function payReferralBonus(User $user, Deposit $deposit, ?User $admin): void
     {
         $bonus = intdiv((int) $deposit->credited_micros * Setting::integer('referral_bonus_bps'), 10000);
 
@@ -496,12 +497,12 @@ class WalletService
         }
     }
 
-    private function markReviewed(Deposit|Withdrawal $request, RequestStatus $status, User $admin, ?string $note = null): void
+    private function markReviewed(Deposit|Withdrawal $request, RequestStatus $status, ?User $admin, ?string $note = null): void
     {
         $request->forceFill([
             'status' => $status,
             'admin_note' => $note,
-            'reviewed_by' => $admin->id,
+            'reviewed_by' => $admin?->id,
             'reviewed_at' => now(),
         ])->save();
     }

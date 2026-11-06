@@ -5,6 +5,7 @@ use App\Exceptions\WalletException;
 use App\Models\Deposit;
 use App\Models\DepositWallet;
 use App\Services\BybitAccount;
+use App\Services\DepositAutoCredit;
 use App\Services\MarketPrices;
 use App\Services\WalletService;
 use App\Support\Usdt;
@@ -76,6 +77,20 @@ new #[Title('Deposits')] class extends Component {
         Flux::modal('approve-deposit')->show();
     }
 
+    /**
+     * Run auto-credit now instead of waiting for the next scheduled check.
+     */
+    public function autoCreditNow(DepositAutoCredit $autoCredit, BybitAccount $bybit): void
+    {
+        Gate::authorize('manage-money');
+
+        $bybit->refresh();
+        $counts = $autoCredit->run();
+        unset($this->deposits);
+
+        Flux::toast(text: __(':credited credited automatically, :left left for you to review.', $counts));
+    }
+
     public function approve(WalletService $wallet): void
     {
         Gate::authorize('manage-money');
@@ -131,12 +146,17 @@ new #[Title('Deposits')] class extends Component {
             <flux:heading size="xl">{{ __('Deposits') }}</flux:heading>
             <flux:text class="mt-1">{{ __('Open each transaction on the blockchain and check the amount reached our address with enough confirmations before you approve. Approved deposits are credited in USDT.') }}</flux:text>
         </div>
-        <flux:select wire:model.live="status" class="sm:max-w-48">
-            <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
-            <flux:select.option value="approved">{{ __('Approved') }}</flux:select.option>
-            <flux:select.option value="rejected">{{ __('Rejected') }}</flux:select.option>
-            <flux:select.option value="all">{{ __('All') }}</flux:select.option>
-        </flux:select>
+        <div class="flex w-full flex-col gap-2 sm:w-auto sm:flex-row">
+            @if ($canManageMoney && DepositAutoCredit::isEnabled())
+                <flux:button icon="bolt" wire:click="autoCreditNow" data-auto-credit-now>{{ __('Credit confirmed now') }}</flux:button>
+            @endif
+            <flux:select wire:model.live="status" class="sm:max-w-48">
+                <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
+                <flux:select.option value="approved">{{ __('Approved') }}</flux:select.option>
+                <flux:select.option value="rejected">{{ __('Rejected') }}</flux:select.option>
+                <flux:select.option value="all">{{ __('All') }}</flux:select.option>
+            </flux:select>
+        </div>
     </div>
 
     <flux:card class="!p-0 overflow-hidden">

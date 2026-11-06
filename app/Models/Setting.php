@@ -34,6 +34,9 @@ class Setting extends Model
         'min_withdrawal_micros' => '10000000',
         'daily_withdrawal_limit_micros' => '0',
         'withdrawal_requires_kyc' => '1',
+        'auto_credit_deposits' => '0',
+        'auto_credit_crypto' => '0',
+        'auto_credit_max_micros' => '1000000000',
         'referral_bonus_bps' => '100',
         'company_details' => '',
     ];
