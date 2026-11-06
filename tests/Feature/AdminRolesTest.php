@@ -113,3 +113,62 @@ test('owners can make and download a backup from the admin', function () {
         ->call('download', '../../.env')
         ->assertNotFound();
 });
+
+test('owners can give a user a role, change it and take it away', function () {
+    $owner = User::factory()->admin()->create();
+    $user = User::factory()->create();
+
+    Livewire::actingAs($owner)->test('pages::admin.user', ['user' => $user])
+        ->assertSet('role', 'customer')
+        ->set('role', 'support')
+        ->call('saveRole')
+        ->assertHasNoErrors();
+
+    expect($user->fresh()->is_admin)->toBeTrue()
+        ->and($user->fresh()->admin_role)->toBe(AdminRole::Support);
+
+    Livewire::actingAs($owner)->test('pages::admin.user', ['user' => $user->fresh()])
+        ->assertSet('role', 'support')
+        ->set('role', 'customer')
+        ->call('saveRole');
+
+    expect($user->fresh()->is_admin)->toBeFalse()
+        ->and($user->fresh()->admin_role)->toBeNull();
+
+    Livewire::actingAs($owner)->test('pages::admin.user', ['user' => $user])
+        ->set('role', 'god')
+        ->call('saveRole')
+        ->assertHasErrors('role');
+});
+
+test('support staff cannot change roles and nobody can change their own', function () {
+    $support = User::factory()->support()->create();
+    $owner = User::factory()->admin()->create();
+
+    Livewire::actingAs($support)->test('pages::admin.user', ['user' => User::factory()->create()])
+        ->assertDontSee('data-role-card', false)
+        ->set('role', 'owner')
+        ->call('saveRole')
+        ->assertForbidden();
+
+    Livewire::actingAs($owner)->test('pages::admin.user', ['user' => $owner])
+        ->set('role', 'customer')
+        ->call('saveRole')
+        ->assertStatus(422);
+
+    expect($support->fresh()->isOwner())->toBeFalse()
+        ->and($owner->fresh()->isOwner())->toBeTrue();
+});
+
+test('the backups list is paginated', function () {
+    Storage::fake('local');
+    foreach (range(1, 12) as $i) {
+        Storage::disk('local')->put(sprintf('backups/backup-2026-01-%02d-020000.zip', $i), 'x');
+    }
+
+    Livewire::actingAs(User::factory()->admin()->create())->test('pages::admin.backups')
+        ->assertSee('backup-2026-01-12')
+        ->assertDontSee('backup-2026-01-02-')
+        ->call('gotoPage', 2)
+        ->assertSee('backup-2026-01-02-');
+});

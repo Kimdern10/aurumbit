@@ -1,5 +1,6 @@
 <?php
 
+use App\Enums\AdminRole;
 use App\Exceptions\WalletException;
 use App\Models\LedgerEntry;
 use App\Models\User;
@@ -35,6 +36,17 @@ new #[Title('User')] class extends Component {
     public string $suspendFor = '7';
 
     public string $blockReason = '';
+
+    /**
+     * "customer", "support" or "owner".
+     */
+    public string $role = 'customer';
+
+    public function mount(User $user): void
+    {
+        $this->user = $user;
+        $this->role = $user->is_admin ? ($user->admin_role ?? AdminRole::Support)->value : 'customer';
+    }
 
     /**
      * @return LengthAwarePaginator<int, LedgerEntry>
@@ -113,6 +125,32 @@ new #[Title('User')] class extends Component {
         Flux::modal('block-user')->close();
     }
 
+    /**
+     * Give the user staff access, change it, or take it away. Owners only,
+     * and never on their own account, so there is always an owner left.
+     */
+    public function saveRole(): void
+    {
+        Gate::authorize('manage-money');
+        abort_if($this->user->is(Auth::user()), 422, 'You cannot change your own role.');
+
+        $this->validate(['role' => ['required', Rule::in(['customer', ...array_column(AdminRole::cases(), 'value')])]]);
+
+        $adminRole = AdminRole::tryFrom($this->role);
+        $this->user->forceFill(['is_admin' => $adminRole !== null, 'admin_role' => $adminRole])->save();
+
+        $this->user->notify(new AccountActivity(
+            'Your access changed',
+            $adminRole === null
+                ? 'Your staff access was removed. You now have a normal customer account.'
+                : 'You now have '.$adminRole->label().' access to the admin panel. Sign in to open it.',
+            null,
+            $adminRole === null ? 'info' : 'success',
+        ));
+
+        Flux::toast(variant: 'success', text: $adminRole === null ? __('Staff access removed.') : __('Role set to :role.', ['role' => $adminRole->label()]));
+    }
+
     public function restore(): void
     {
         Gate::authorize('manage-money');
@@ -137,6 +175,9 @@ new #[Title('User')] class extends Component {
                 <flux:badge size="sm" :color="$user->two_factor_confirmed_at ? 'green' : 'zinc'">{{ $user->two_factor_confirmed_at ? __('Two-step on') : __('Two-step off') }}</flux:badge>
                 @if ($user->kycStatus()) <flux:badge size="sm" :color="$user->kycStatus()->color()">{{ __('Identity: :status', ['status' => $user->kycStatus()->label()]) }}</flux:badge> @endif
                 <x-account-status-badge :user="$user" />
+                @if ($user->is_admin)
+                    <flux:badge size="sm" :color="$user->isOwner() ? 'amber' : 'zinc'" icon="shield-check">{{ __('Staff: :role', ['role' => $user->admin_role?->label() ?? __('No role')]) }}</flux:badge>
+                @endif
             </div>
         </div>
         @if (! $user->is(auth()->user()) && $canManageMoney)
@@ -164,6 +205,22 @@ new #[Title('User')] class extends Component {
             </flux:callout.heading>
             <flux:callout.text>{{ ($user->isBanned() ? $user->ban_reason : $user->suspension_reason) ?: __('No reason given.') }}</flux:callout.text>
         </flux:callout>
+    @endif
+
+    @if ($canManageMoney && ! $user->is(auth()->user()))
+        <flux:card data-role-card>
+            <form wire:submit="saveRole" class="flex flex-col gap-4 sm:flex-row sm:items-end">
+                <div class="min-w-0 flex-1">
+                    <flux:select wire:model="role" :label="__('Role')" :description="__('Staff cannot use the customer area. Give staff their own account rather than promoting a customer with money in it.')">
+                        <flux:select.option value="customer">{{ __('Customer (no admin access)') }}</flux:select.option>
+                        @foreach (AdminRole::cases() as $case)
+                            <flux:select.option :value="$case->value">{{ __($case->label()) }} — {{ __($case->description()) }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+                <flux:button type="submit" icon="shield-check" wire:confirm="{{ __('Change this user\'s access?') }}">{{ __('Save role') }}</flux:button>
+            </form>
+        </flux:card>
     @endif
 
     <div class="grid gap-4 sm:grid-cols-3">

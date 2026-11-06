@@ -86,7 +86,7 @@ class DatabaseBackup
                 'size' => self::disk()->size($path),
                 'created_at' => Carbon::createFromTimestamp(self::disk()->lastModified($path)),
             ])
-            ->sortByDesc('created_at')
+            ->sortByDesc('name')
             ->all());
     }
 

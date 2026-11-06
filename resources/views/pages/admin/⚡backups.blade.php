@@ -2,14 +2,18 @@
 
 use App\Support\DatabaseBackup;
 use Flux\Flux;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 new #[Title('Backups')] class extends Component {
+    use WithPagination;
+
     /**
      * Only owners may open this page or download a backup.
      */
@@ -19,12 +23,17 @@ new #[Title('Backups')] class extends Component {
     }
 
     /**
-     * @return list<array{path: string, name: string, size: int, created_at: Carbon}>
+     * Ten backups per page, newest first.
+     *
+     * @return LengthAwarePaginator<int, array{path: string, name: string, size: int, created_at: Carbon}>
      */
     #[Computed]
-    public function backups(): array
+    public function backups(): LengthAwarePaginator
     {
-        return DatabaseBackup::list();
+        $all = DatabaseBackup::list();
+        $page = $this->getPage();
+
+        return new LengthAwarePaginator(array_slice($all, ($page - 1) * 10, 10), count($all), 10, $page);
     }
 
     public function backUpNow(): void
@@ -38,7 +47,7 @@ new #[Title('Backups')] class extends Component {
 
     public function download(string $name): StreamedResponse
     {
-        $backup = collect($this->backups)->firstWhere('name', $name);
+        $backup = collect(DatabaseBackup::list())->firstWhere('name', $name);
         abort_if($backup === null, 404);
 
         return DatabaseBackup::disk()->download($backup['path'], $backup['name']);
@@ -56,7 +65,7 @@ new #[Title('Backups')] class extends Component {
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
-        <flux:table class="[&_td]:px-4! [&_th]:px-4!">
+        <flux:table :paginate="$this->backups" class="[&_td]:px-4! [&_th]:px-4!">
             <flux:table.columns>
                 <flux:table.column>{{ __('Made') }}</flux:table.column>
                 <flux:table.column>{{ __('File') }}</flux:table.column>

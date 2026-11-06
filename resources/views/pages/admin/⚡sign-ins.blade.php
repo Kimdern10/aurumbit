@@ -3,7 +3,6 @@
 use App\Models\AdminSignIn;
 use App\Models\User;
 use Illuminate\Pagination\LengthAwarePaginator;
-use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Gate;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
@@ -33,12 +32,12 @@ new #[Title('Admin sign-ins')] class extends Component {
     /**
      * Everyone who can open the admin panel, with their role.
      *
-     * @return Collection<int, User>
+     * @return LengthAwarePaginator<int, User>
      */
     #[Computed]
-    public function admins(): Collection
+    public function admins(): LengthAwarePaginator
     {
-        return User::query()->where('is_admin', true)->orderBy('name')->get(['id', 'name', 'email', 'is_admin', 'admin_role']);
+        return User::query()->where('is_admin', true)->orderBy('name')->paginate(10, ['id', 'name', 'email', 'is_admin', 'admin_role'], 'admins');
     }
 };
 ?>
@@ -62,7 +61,8 @@ new #[Title('Admin sign-ins')] class extends Component {
                 </div>
             @endforeach
         </div>
-        <flux:text class="text-xs">{{ __('Add an admin or change a role from the server: php artisan app:create-admin --role=support (or --role=owner).') }}</flux:text>
+        <flux:pagination :paginator="$this->admins" />
+        <flux:text class="text-xs">{{ __('To give someone staff access or change their role, open their account under Users and use Role.') }}</flux:text>
     </flux:card>
 
     <flux:card class="!p-0 overflow-hidden">
