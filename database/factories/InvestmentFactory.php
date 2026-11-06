@@ -22,7 +22,7 @@ class InvestmentFactory extends Factory
         return [
             'user_id' => User::factory(),
             'plan_id' => Plan::factory(),
-            'amount_sats' => 1_000_000,
+            'amount_micros' => 1_000_000_000,
             'target_return_bps' => 300,
             'duration_days' => 30,
             'starts_at' => now(),

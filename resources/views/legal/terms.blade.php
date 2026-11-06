@@ -16,17 +16,17 @@
 
     <h2>4. Deposits and withdrawals</h2>
     <ul>
-        <li>Send only BTC on the Bitcoin network to the deposit address shown in your account, then submit the amount and transaction ID. We credit it after the transaction is confirmed on the blockchain.</li>
-        <li>Withdrawals need a valid Bitcoin address of your own. The amount is held from your balance while an admin reviews the request, and returned if it is rejected.</li>
+        <li>Your balance is held in USDT. Send only the coin and network shown next to each deposit address in your account, then submit the amount and transaction ID. After the transaction is confirmed on the blockchain, we credit its value in USDT at the market price when we review it.</li>
+        <li>Withdrawals are paid in USDT on the TRC20 (Tron) or ERC20 (Ethereum) network and need a valid address of your own on that network. The amount is held from your balance while an admin reviews the request, and returned if it is rejected.</li>
         <li>We may ask for identity verification before a withdrawal.</li>
-        <li>Approved withdrawals are sent to the address you gave, and you can see the payment's transaction ID. Payments on the blockchain cannot be reversed.</li>
+        <li>Approved withdrawals are sent to the address you gave. Each request has a reference number, and we add the payment's transaction ID when we have it. Payments on the blockchain cannot be reversed.</li>
     </ul>
 
     <h2>5. Referrals</h2>
     <p>You may share your referral link. A referral bonus is paid only on the first approved deposit of a person you invited. Do not spam or mislead people to get sign-ups.</p>
 
     <h2>6. No advice</h2>
-    <p>Nothing on this website is investment, tax or legal advice. Read the <a href="{{ route('legal.risk') }}">risk disclosure</a>.</p>
+    <p>Nothing on this website is investment, tax or legal advice. Read the <a href="{{ route('legal.risk') }}" wire:navigate>risk disclosure</a>.</p>
 
     <h2>7. Changes and contact</h2>
     <p>We may update these terms; the latest version is always on this page. Questions: <a href="mailto:{{ \App\Models\Setting::get('support_email') }}">{{ \App\Models\Setting::get('support_email') }}</a>.</p>

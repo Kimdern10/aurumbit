@@ -8,7 +8,7 @@
     $offset = 0;
 @endphp
 
-<div {{ $attributes->class('flex flex-col items-center gap-4 sm:flex-row') }}>
+<div {{ $attributes->class('flex min-w-0 flex-col items-center gap-4 sm:flex-row') }}>
     <div class="relative size-36 shrink-0">
         <svg viewBox="0 0 42 42" class="size-full -rotate-90" role="img" aria-label="{{ $caption ?? __('Allocation') }}">
             <circle cx="21" cy="21" r="{{ $radius }}" fill="none" stroke-width="5" class="stroke-zinc-100 dark:stroke-white/10" />
@@ -23,15 +23,16 @@
                 @endforeach
             @endif
         </svg>
-        <div class="absolute inset-0 flex flex-col items-center justify-center text-center">
+        {{-- inset-5 keeps the centre text inside the ring's hole. --}}
+        <div class="absolute inset-5 flex flex-col items-center justify-center overflow-hidden text-center">
             {{ $center }}
         </div>
     </div>
-    <ul class="w-full space-y-2 text-sm">
+    <ul class="w-full min-w-0 space-y-2 text-sm">
         @foreach ($segments as $segment)
-            <li class="flex items-center justify-between gap-3">
-                <span class="flex items-center gap-2"><span class="size-2.5 rounded-full" style="background: {{ $segment['color'] }}"></span>{{ $segment['label'] }}</span>
-                <span class="font-medium text-zinc-900 dark:text-white">{{ $segment['text'] ?? $segment['value'] }}</span>
+            <li class="flex items-start justify-between gap-3">
+                <span class="flex min-w-0 items-center gap-2"><span class="size-2.5 shrink-0 rounded-full" style="background: {{ $segment['color'] }}"></span><span class="truncate">{{ $segment['label'] }}</span></span>
+                <span class="min-w-0 text-end font-medium [overflow-wrap:anywhere] text-zinc-900 tabular-nums dark:text-white">{{ $segment['text'] ?? $segment['value'] }}</span>
             </li>
         @endforeach
     </ul>

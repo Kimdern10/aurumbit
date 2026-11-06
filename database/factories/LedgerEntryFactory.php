@@ -22,8 +22,8 @@ class LedgerEntryFactory extends Factory
         return [
             'user_id' => User::factory(),
             'type' => LedgerType::Adjustment,
-            'amount_sats' => 100_000,
-            'balance_after_sats' => 100_000,
+            'amount_micros' => 100_000_000,
+            'balance_after_micros' => 100_000_000,
             'description' => 'Test entry',
         ];
     }

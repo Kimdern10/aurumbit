@@ -5,8 +5,10 @@ namespace App\Services;
 use App\Enums\InvestmentStatus;
 use App\Enums\LedgerType;
 use App\Enums\RequestStatus;
+use App\Enums\WithdrawalNetwork;
 use App\Exceptions\WalletException;
 use App\Models\Deposit;
+use App\Models\DepositWallet;
 use App\Models\Investment;
 use App\Models\LedgerEntry;
 use App\Models\Plan;
@@ -14,13 +16,18 @@ use App\Models\Setting;
 use App\Models\User;
 use App\Models\Withdrawal;
 use App\Notifications\AccountActivity;
+use App\Rules\UsdtAddress;
 use App\Support\Btc;
+use App\Support\Usdt;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
 /**
  * The only place balances change. Every change runs in a database transaction
  * with the user's row locked, and writes a ledger entry (the audit log).
+ *
+ * Balances are kept in USDT (as micros). Deposits can arrive in any coin the
+ * admin accepts and are credited at their USDT value; withdrawals are paid in USDT.
  *
  * The site never holds private keys: the admin checks deposits on the
  * blockchain before crediting them and pays withdrawals from the company wallet.
@@ -30,29 +37,61 @@ class WalletService
     public function __construct(private MarketPrices $prices) {}
 
     /**
-     * Record a deposit the user says they sent. Nothing is credited until an admin approves it.
+     * Record a deposit the user says they sent to one of our wallets. Nothing is
+     * credited until an admin checks it and approves it.
      */
-    public function requestDeposit(User $user, int $amountSats, ?string $reference = null): Deposit
+    public function requestDeposit(User $user, DepositWallet $wallet, string $coinAmount, ?string $reference = null): Deposit
     {
-        $minimum = Setting::integer('min_deposit_sats');
-
-        if ($amountSats < $minimum) {
-            throw new WalletException('The smallest deposit is '.Btc::format($minimum).' BTC.');
+        if (! $wallet->is_active) {
+            throw new WalletException('This wallet is not accepting deposits.');
         }
 
-        return $user->deposits()->create(['amount_sats' => $amountSats, 'reference' => $reference]);
+        $coinAmount = trim($coinAmount);
+
+        if (Btc::toSats($coinAmount) === null || Btc::toSats($coinAmount) === 0) {
+            throw new WalletException('Enter the amount you sent, with up to 8 decimal places.');
+        }
+
+        $minimum = Setting::integer('min_deposit_micros');
+        $priceCents = DepositWallet::priceCentsFor($wallet->coin, $this->prices);
+
+        if ($priceCents !== null && Usdt::fromCoin($coinAmount, $priceCents) < $minimum) {
+            throw new WalletException('The smallest deposit is '.Usdt::format($minimum).' USDT worth of '.$wallet->coin.'.');
+        }
+
+        $deposit = $user->deposits()->create([
+            'deposit_wallet_id' => $wallet->id,
+            'coin' => $wallet->coin,
+            'network' => $wallet->network,
+            'coin_amount' => $coinAmount,
+            'reference' => $reference,
+        ]);
+
+        $user->notify(new AccountActivity('Deposit received', 'We received your deposit of '.$deposit->coinLabel().' (reference '.$deposit->code().'). It is credited once the transaction is confirmed and checked.', $deposit->receiptUrl()));
+
+        return $deposit;
     }
 
-    public function approveDeposit(Deposit $deposit, User $admin): void
+    /**
+     * Credit a checked deposit. The admin confirms how much USDT it is worth;
+     * the deposit page suggests the amount at today's price.
+     */
+    public function approveDeposit(Deposit $deposit, User $admin, int $creditMicros): void
     {
-        DB::transaction(function () use ($deposit, $admin): void {
+        if ($creditMicros <= 0) {
+            throw new WalletException('Enter the USDT amount to credit.');
+        }
+
+        DB::transaction(function () use ($deposit, $admin, $creditMicros): void {
             $deposit = $this->lockPendingDeposit($deposit->id);
             $user = $this->lockUser($deposit->user_id);
 
-            $this->apply($user, $deposit->amount_sats, LedgerType::Deposit, 'Deposit #'.$deposit->id.' credited', $deposit, $admin);
+            $deposit->credited_micros = $creditMicros;
+
+            $this->apply($user, $creditMicros, LedgerType::Deposit, 'Deposit '.$deposit->code().' credited ('.$deposit->coinLabel().')', $deposit, $admin);
             $this->markReviewed($deposit, RequestStatus::Approved, $admin);
 
-            $user->notify(new AccountActivity('Deposit credited', Btc::format($deposit->amount_sats).' BTC has been added to your balance.', route('transactions'), 'success'));
+            $user->notify(new AccountActivity('Deposit credited', 'Your '.$deposit->coinLabel().' deposit was credited as '.Usdt::format($creditMicros).' USDT.', $deposit->receiptUrl(), 'success'));
 
             $this->payReferralBonus($user, $deposit, $admin);
         });
@@ -64,33 +103,50 @@ class WalletService
             $locked = $this->lockPendingDeposit($deposit->id);
             $this->markReviewed($locked, RequestStatus::Rejected, $admin, $note);
 
-            $locked->user->notify(new AccountActivity('Deposit not credited', 'Your deposit of '.Btc::format($locked->amount_sats).' BTC was rejected'.($note ? ': '.$note : '.'), route('deposit'), 'danger'));
+            $locked->user->notify(new AccountActivity('Deposit not credited', 'Your deposit of '.$locked->coinLabel().' was rejected'.($note ? ': '.$note : '.'), $locked->receiptUrl(), 'danger'));
         });
     }
 
     /**
      * Hold the amount from the balance straight away so it cannot be spent twice.
+     * The user picks how they are paid: USDT, or BTC/ETH/SOL converted at the
+     * live price right now. The coin amount is fixed here so the admin sends exactly that.
      */
-    public function requestWithdrawal(User $user, int $amountSats, string $address): Withdrawal
+    public function requestWithdrawal(User $user, int $amountMicros, WithdrawalNetwork $network, string $address): Withdrawal
     {
-        $minimum = Setting::integer('min_withdrawal_sats');
+        $quote = $this->quoteWithdrawal($amountMicros, $network);
 
-        if ($amountSats < $minimum) {
-            throw new WalletException('The smallest withdrawal is '.Btc::format($minimum).' BTC.');
+        $minimum = Setting::integer('min_withdrawal_micros');
+
+        if ($amountMicros < $minimum) {
+            throw new WalletException('The smallest withdrawal is '.Usdt::format($minimum).' USDT.');
+        }
+
+        if (! in_array($network, WithdrawalNetwork::selectable(), true) || ! UsdtAddress::isValid($address, $network)) {
+            throw new WalletException('Enter a valid '.$network->shortLabel().' address.');
         }
 
         if (Setting::enabled('withdrawal_requires_kyc') && ! $user->isKycVerified()) {
             throw new WalletException('Please verify your identity before withdrawing.');
         }
 
-        return DB::transaction(function () use ($user, $amountSats, $address): Withdrawal {
+        return DB::transaction(function () use ($user, $amountMicros, $network, $address, $quote): Withdrawal {
             $locked = $this->lockUser($user->id);
 
-            $withdrawal = $locked->withdrawals()->create(['amount_sats' => $amountSats, 'btc_address' => trim($address)]);
+            $withdrawal = $locked->withdrawals()->create([
+                'amount_micros' => $amountMicros,
+                'network' => $network,
+                'coin' => $network->coin(),
+                'coin_amount' => $quote['coin_amount'],
+                'price_cents' => $quote['price_cents'],
+                'address' => trim($address),
+            ]);
 
-            $this->apply($locked, -$amountSats, LedgerType::Withdrawal, 'Withdrawal #'.$withdrawal->id.' requested', $withdrawal);
+            $this->apply($locked, -$amountMicros, LedgerType::Withdrawal, 'Withdrawal '.$withdrawal->code().' requested ('.$withdrawal->payoutLabel().')', $withdrawal);
 
-            $user->balance_sats = $locked->balance_sats;
+            $user->balance_micros = $locked->balance_micros;
+
+            $locked->notify(new AccountActivity('Withdrawal requested', 'Your withdrawal of '.$withdrawal->payoutLabel().' to '.$withdrawal->network->label().' (reference '.$withdrawal->code().') is waiting for review. The amount is on hold from your balance.', $withdrawal->receiptUrl()));
 
             return $withdrawal;
         });
@@ -98,21 +154,47 @@ class WalletService
 
     /**
      * Mark the withdrawal as paid, after the admin has sent the coins from the
-     * company wallet, and record the blockchain transaction ID.
+     * company wallet. The blockchain transaction ID is optional; when given it
+     * must match the network, and the user gets a link to follow the payment.
      */
-    public function approveWithdrawal(Withdrawal $withdrawal, User $admin, string $payoutTxid, ?string $note = null): void
+    public function approveWithdrawal(Withdrawal $withdrawal, User $admin, ?string $payoutTxid = null, ?string $note = null): void
     {
-        if (preg_match('/^[0-9a-fA-F]{64}$/', $payoutTxid) !== 1) {
-            throw new WalletException('Enter the 64-character transaction ID of the payment.');
+        $payoutTxid = filled($payoutTxid) ? $withdrawal->network->normalizeTxid($payoutTxid) : null;
+
+        if ($payoutTxid !== null && ! $withdrawal->network->isValidTxid($payoutTxid)) {
+            throw new WalletException($withdrawal->network->txidHint());
         }
 
         DB::transaction(function () use ($withdrawal, $admin, $payoutTxid, $note): void {
             $locked = $this->lockPendingWithdrawal($withdrawal->id);
-            $locked->forceFill(['payout_txid' => strtolower($payoutTxid)]);
+            $locked->forceFill(['payout_txid' => $payoutTxid]);
             $this->markReviewed($locked, RequestStatus::Approved, $admin, $note);
 
-            $locked->user->notify(new AccountActivity('Withdrawal sent', Btc::format($locked->amount_sats).' BTC has been sent to your wallet.', route('withdraw'), 'success'));
+            $locked->user->notify(new AccountActivity('Withdrawal sent', $locked->payoutLabel().' has been sent to your wallet.', $locked->receiptUrl(), 'success'));
         });
+    }
+
+    /**
+     * The coin amount a withdrawal pays at today's price, or nulls for USDT.
+     *
+     * @return array{coin_amount: string|null, price_cents: int|null}
+     */
+    public function quoteWithdrawal(int $amountMicros, WithdrawalNetwork $network): array
+    {
+        if ($network->isUsdt()) {
+            return ['coin_amount' => null, 'price_cents' => null];
+        }
+
+        $priceCents = $this->prices->cached()[$network->priceKey().'_cents'] ?? null;
+
+        if (! $priceCents) {
+            throw new WalletException('The live '.$network->coin().' price is not available right now. Please try again in a minute or withdraw in USDT.');
+        }
+
+        return [
+            'coin_amount' => str_replace(',', '', Btc::format(Usdt::toCoinUnits($amountMicros, $priceCents), fixed: true)),
+            'price_cents' => $priceCents,
+        ];
     }
 
     /**
@@ -124,35 +206,35 @@ class WalletService
             $withdrawal = $this->lockPendingWithdrawal($withdrawal->id);
             $user = $this->lockUser($withdrawal->user_id);
 
-            $this->apply($user, $withdrawal->amount_sats, LedgerType::WithdrawalRefund, 'Withdrawal #'.$withdrawal->id.' rejected, amount returned', $withdrawal, $admin);
+            $this->apply($user, $withdrawal->amount_micros, LedgerType::WithdrawalRefund, 'Withdrawal '.$withdrawal->code().' rejected, amount returned', $withdrawal, $admin);
             $this->markReviewed($withdrawal, RequestStatus::Rejected, $admin, $note);
 
-            $user->notify(new AccountActivity('Withdrawal rejected', Btc::format($withdrawal->amount_sats).' BTC is back in your balance'.($note ? '. Reason: '.$note : '.'), route('withdraw'), 'danger'));
+            $user->notify(new AccountActivity('Withdrawal rejected', Usdt::format($withdrawal->amount_micros).' USDT is back in your balance'.($note ? '. Reason: '.$note : '.'), $withdrawal->receiptUrl(), 'danger'));
         });
     }
 
     /**
      * Move money from the balance into a plan.
      */
-    public function invest(User $user, Plan $plan, int $amountSats): Investment
+    public function invest(User $user, Plan $plan, int $amountMicros): Investment
     {
         if (! $plan->is_active) {
             throw new WalletException('This plan is not open for new investments.');
         }
 
-        if ($amountSats < $plan->min_sats || ($plan->max_sats !== null && $amountSats > $plan->max_sats)) {
+        if ($amountMicros < $plan->min_micros || ($plan->max_micros !== null && $amountMicros > $plan->max_micros)) {
             throw new WalletException('Enter an amount within the plan limits.');
         }
 
-        $goldMg = $plan->category->value === 'gold' ? $this->prices->goldMilligrams($amountSats) : null;
+        $goldMg = $plan->category->value === 'gold' ? $this->prices->goldMilligrams($amountMicros) : null;
 
-        return DB::transaction(function () use ($user, $plan, $amountSats, $goldMg): Investment {
+        return DB::transaction(function () use ($user, $plan, $amountMicros, $goldMg): Investment {
             $locked = $this->lockUser($user->id);
             $now = now();
 
             $investment = $locked->investments()->create([
                 'plan_id' => $plan->id,
-                'amount_sats' => $amountSats,
+                'amount_micros' => $amountMicros,
                 'target_return_bps' => $plan->target_return_bps,
                 'duration_days' => $plan->duration_days,
                 'gold_mg' => $goldMg,
@@ -160,12 +242,43 @@ class WalletService
                 'ends_at' => $now->addDays($plan->duration_days),
             ]);
 
-            $this->apply($locked, -$amountSats, LedgerType::Investment, 'Invested in '.$plan->name, $investment);
+            $this->apply($locked, -$amountMicros, LedgerType::Investment, 'Invested in '.$plan->name, $investment);
 
-            $user->balance_sats = $locked->balance_sats;
+            $user->balance_micros = $locked->balance_micros;
+
+            $locked->notify(new AccountActivity('Plan started', 'You invested '.Usdt::format($amountMicros).' USDT in '.$plan->name.'. It ends on '.$investment->ends_at->format('M j, Y').' and pays '.Usdt::format($amountMicros + $plan->profitFor($amountMicros)).' USDT.', route('investments'), 'success'));
 
             return $investment;
         });
+    }
+
+    /**
+     * Bring running investments up to date: save the earnings so far and pay
+     * out the ones whose term has ended. For one user, or for everyone.
+     *
+     * @return array{accrued: int, settled: int}
+     */
+    public function processDueInvestments(?User $user = null): array
+    {
+        $counts = ['accrued' => 0, 'settled' => 0];
+
+        Investment::query()
+            ->where('status', InvestmentStatus::Active)
+            ->when($user, fn ($query) => $query->where('user_id', $user->id))
+            ->lazyById()
+            ->each(function (Investment $investment) use (&$counts): void {
+                if ($investment->ends_at->isPast()) {
+                    $this->settle($investment);
+                    $counts['settled']++;
+
+                    return;
+                }
+
+                $this->accrue($investment);
+                $counts['accrued']++;
+            });
+
+        return $counts;
     }
 
     /**
@@ -178,7 +291,7 @@ class WalletService
             $locked = Investment::query()->whereKey($investment->id)->lockForUpdate()->firstOrFail();
 
             if ($locked->status === InvestmentStatus::Active) {
-                $locked->earned_sats = max($locked->earned_sats, $locked->earningsAt());
+                $locked->earned_micros = max($locked->earned_micros, $locked->earningsAt());
                 $locked->save();
             }
         });
@@ -201,17 +314,17 @@ class WalletService
             }
 
             $user = $this->lockUser($locked->user_id);
-            $earned = max($locked->earned_sats, $locked->earningsAt($locked->ends_at->isPast() ? $locked->ends_at : now()));
+            $earned = max($locked->earned_micros, $locked->earningsAt($locked->ends_at->isPast() ? $locked->ends_at : now()));
 
-            $this->apply($user, $locked->amount_sats, LedgerType::InvestmentReturn, $locked->plan->name.' principal returned', $locked, $admin);
+            $this->apply($user, $locked->amount_micros, LedgerType::InvestmentReturn, $locked->plan->name.' principal returned', $locked, $admin);
 
             if ($earned > 0) {
                 $this->apply($user, $earned, LedgerType::Earning, $locked->plan->name.' earnings', $locked, $admin);
             }
 
-            $locked->forceFill(['earned_sats' => $earned, 'status' => InvestmentStatus::Completed, 'settled_at' => now()])->save();
+            $locked->forceFill(['earned_micros' => $earned, 'status' => InvestmentStatus::Completed, 'settled_at' => now()])->save();
 
-            $user->notify(new AccountActivity('Plan completed', $locked->plan->name.' finished. '.Btc::format($locked->amount_sats + $earned).' BTC (including '.Btc::format($earned).' BTC profit) is in your balance.', route('investments'), 'success'));
+            $user->notify(new AccountActivity('Plan completed', $locked->plan->name.' finished. '.Usdt::format($locked->amount_micros + $earned).' USDT (including '.Usdt::format($earned).' USDT profit) is in your balance.', route('investments'), 'success'));
         });
     }
 
@@ -229,23 +342,30 @@ class WalletService
 
             $user = $this->lockUser($locked->user_id);
 
-            $this->apply($user, $locked->amount_sats, LedgerType::InvestmentReturn, $locked->plan->name.' cancelled, principal returned', $locked, $admin);
+            $this->apply($user, $locked->amount_micros, LedgerType::InvestmentReturn, $locked->plan->name.' cancelled, principal returned', $locked, $admin);
 
-            $locked->forceFill(['earned_sats' => 0, 'status' => InvestmentStatus::Cancelled, 'settled_at' => now()])->save();
+            $locked->forceFill(['earned_micros' => 0, 'status' => InvestmentStatus::Cancelled, 'settled_at' => now()])->save();
+
+            $user->notify(new AccountActivity('Plan cancelled', $locked->plan->name.' was stopped early. Your '.Usdt::format($locked->amount_micros).' USDT is back in your balance.', route('investments')));
         });
     }
 
     /**
      * A manual correction by an admin, positive or negative, with a reason.
      */
-    public function adjust(User $user, int $amountSats, string $reason, User $admin): void
+    public function adjust(User $user, int $amountMicros, string $reason, User $admin): void
     {
-        if ($amountSats === 0) {
+        if ($amountMicros === 0) {
             throw new WalletException('Enter an amount other than zero.');
         }
 
-        DB::transaction(function () use ($user, $amountSats, $reason, $admin): void {
-            $this->apply($this->lockUser($user->id), $amountSats, LedgerType::Adjustment, $reason, null, $admin);
+        DB::transaction(function () use ($user, $amountMicros, $reason, $admin): void {
+            $locked = $this->lockUser($user->id);
+            $this->apply($locked, $amountMicros, LedgerType::Adjustment, $reason, null, $admin);
+
+            $locked->notify($amountMicros > 0
+                ? new AccountActivity('Wallet funded', Usdt::format($amountMicros).' USDT has been added to your wallet ('.$reason.'). Your balance is now '.Usdt::format($locked->balance_micros).' USDT.', route('transactions', ['view' => 'balance']), 'success')
+                : new AccountActivity('Wallet debited', Usdt::format(-$amountMicros).' USDT was taken from your wallet ('.$reason.'). Your balance is now '.Usdt::format($locked->balance_micros).' USDT.', route('transactions', ['view' => 'balance'])));
         });
     }
 
@@ -254,7 +374,7 @@ class WalletService
      */
     private function payReferralBonus(User $user, Deposit $deposit, User $admin): void
     {
-        $bonus = intdiv($deposit->amount_sats * Setting::integer('referral_bonus_bps'), 10000);
+        $bonus = intdiv((int) $deposit->credited_micros * Setting::integer('referral_bonus_bps'), 10000);
 
         if ($user->referred_by_id === null || $bonus <= 0) {
             return;
@@ -274,27 +394,27 @@ class WalletService
 
         $this->apply($referrer, $bonus, LedgerType::ReferralBonus, 'Referral bonus for '.$user->name, $deposit, $admin);
 
-        $referrer->notify(new AccountActivity('Referral bonus', 'You earned '.Btc::format($bonus).' BTC because someone you invited made their first deposit.', route('referrals'), 'success'));
+        $referrer->notify(new AccountActivity('Referral bonus', 'You earned '.Usdt::format($bonus).' USDT because someone you invited made their first deposit.', route('referrals'), 'success'));
     }
 
     /**
      * Change a locked user's balance and write the audit entry.
      */
-    private function apply(User $user, int $amountSats, LedgerType $type, string $description, ?Model $subject = null, ?User $actor = null): LedgerEntry
+    private function apply(User $user, int $amountMicros, LedgerType $type, string $description, ?Model $subject = null, ?User $actor = null): LedgerEntry
     {
-        $newBalance = $user->balance_sats + $amountSats;
+        $newBalance = $user->balance_micros + $amountMicros;
 
         if ($newBalance < 0) {
             throw new WalletException('Your available balance is too low for this.');
         }
 
-        $user->forceFill(['balance_sats' => $newBalance])->save();
+        $user->forceFill(['balance_micros' => $newBalance])->save();
 
         return LedgerEntry::query()->create([
             'user_id' => $user->id,
             'type' => $type,
-            'amount_sats' => $amountSats,
-            'balance_after_sats' => $newBalance,
+            'amount_micros' => $amountMicros,
+            'balance_after_micros' => $newBalance,
             'description' => $description,
             'subject_type' => $subject?->getMorphClass(),
             'subject_id' => $subject?->getKey(),

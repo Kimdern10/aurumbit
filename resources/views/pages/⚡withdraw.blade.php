@@ -1,15 +1,17 @@
 <?php
 
+use App\Enums\WithdrawalNetwork;
 use App\Exceptions\WalletException;
 use App\Models\Setting;
 use App\Models\Withdrawal;
-use App\Rules\BitcoinAddress;
+use App\Rules\UsdtAddress;
 use App\Services\WalletService;
-use App\Support\Btc;
+use App\Support\Usdt;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -19,6 +21,8 @@ new #[Title('Withdraw')] class extends Component {
     use WithPagination;
 
     public string $amount = '';
+
+    public string $network = 'trc20';
 
     public string $address = '';
 
@@ -33,16 +37,44 @@ new #[Title('Withdraw')] class extends Component {
         return Auth::user()->withdrawals()->latest('id')->paginate(8);
     }
 
+    #[Computed]
+    public function selectedNetwork(): ?WithdrawalNetwork
+    {
+        $network = WithdrawalNetwork::tryFrom($this->network);
+
+        return in_array($network, WithdrawalNetwork::selectable(), true) ? $network : null;
+    }
+
+    /**
+     * What the typed amount pays in the chosen coin at today's price, e.g. "0.01300000 BTC".
+     */
+    #[Computed]
+    public function quote(): ?string
+    {
+        $micros = Usdt::toMicros($this->amount);
+
+        if (! $micros || $this->selectedNetwork === null || $this->selectedNetwork->isUsdt()) {
+            return null;
+        }
+
+        try {
+            return app(WalletService::class)->quoteWithdrawal($micros, $this->selectedNetwork)['coin_amount'].' '.$this->selectedNetwork->coin();
+        } catch (WalletException) {
+            return null;
+        }
+    }
+
     public function save(WalletService $wallet): void
     {
         $this->address = trim($this->address);
 
         $this->validate([
-            'amount' => ['required', 'regex:'.Btc::INPUT_PATTERN],
-            'address' => ['required', 'string', 'max:100', new BitcoinAddress],
+            'amount' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
+            'network' => ['required', Rule::in(array_map(fn (WithdrawalNetwork $network): string => $network->value, WithdrawalNetwork::selectable()))],
+            'address' => ['required', 'string', 'max:100', new UsdtAddress($this->selectedNetwork)],
             'confirmAddress' => ['accepted'],
         ], [
-            'amount.regex' => __('Enter an amount in BTC, with up to 8 decimal places.'),
+            'amount.regex' => __('Enter an amount in USDT, with up to 2 decimal places.'),
             'confirmAddress.accepted' => __('Please confirm the address is yours and correct.'),
         ]);
 
@@ -57,7 +89,7 @@ new #[Title('Withdraw')] class extends Component {
         RateLimiter::hit($key, 600);
 
         try {
-            $wallet->requestWithdrawal(Auth::user(), (int) Btc::toSats($this->amount), $this->address);
+            $wallet->requestWithdrawal(Auth::user(), (int) Usdt::toMicros($this->amount), $this->selectedNetwork, $this->address);
         } catch (WalletException $exception) {
             $this->addError('amount', $exception->getMessage());
 
@@ -74,7 +106,7 @@ new #[Title('Withdraw')] class extends Component {
 <div class="space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Withdraw') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Available balance:') }} <x-btc :sats="auth()->user()->balance_sats" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
+        <flux:text class="mt-1">{{ __('Available balance:') }} <x-usdt :micros="auth()->user()->balance_micros" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
     </div>
 
     @if (Setting::enabled('withdrawal_requires_kyc') && ! auth()->user()->isKycVerified())
@@ -91,13 +123,23 @@ new #[Title('Withdraw')] class extends Component {
         <flux:card class="lg:col-span-3">
             <form wire:submit="save" class="space-y-5">
                 <flux:heading>{{ __('Request a withdrawal') }}</flux:heading>
-                <flux:input wire:model="amount" :label="__('Amount (BTC)')" inputmode="decimal" autocomplete="off" placeholder="0.005"
-                    :description="__('Minimum :min BTC', ['min' => Btc::format(Setting::integer('min_withdrawal_sats'))])" />
-                <flux:input wire:model.blur="address" :label="__('Your Bitcoin address')" autocomplete="off" spellcheck="false" class="font-mono"
-                    placeholder="bc1q…" :description="__('Mainnet address starting with 1, 3, bc1q or bc1p. We check its checksum.')" />
+                <flux:input wire:model.live.debounce.400ms="amount" :label="__('Amount from your balance (USDT)')" inputmode="decimal" autocomplete="off" placeholder="100.00"
+                    :description="__('Minimum :min USDT', ['min' => Usdt::format(Setting::integer('min_withdrawal_micros'))])" />
+                <flux:radio.group wire:model.live="network" :label="__('Receive it in')" variant="cards" class="grid! grid-cols-1 gap-2 sm:grid-cols-2">
+                    @foreach (WithdrawalNetwork::selectable() as $option)
+                        <flux:radio :value="$option->value" :label="$option->label()" />
+                    @endforeach
+                </flux:radio.group>
+                @if ($this->quote)
+                    <flux:callout color="sky" icon="arrows-right-left" data-withdraw-quote>
+                        <flux:callout.text>{{ __('You receive about :quote at today\'s price. The amount is fixed when you submit.', ['quote' => $this->quote]) }}</flux:callout.text>
+                    </flux:callout>
+                @endif
+                <flux:input wire:model.blur="address" :label="__('Your :coin address', ['coin' => $this->selectedNetwork?->shortLabel()])" autocomplete="off" spellcheck="false" class="font-mono"
+                    :placeholder="$this->selectedNetwork?->addressPlaceholder()" :description="$this->selectedNetwork?->addressHint()" />
                 <flux:field variant="inline">
                     <flux:checkbox wire:model="confirmAddress" />
-                    <flux:label class="text-sm leading-snug">{{ __('This address belongs to me and I have checked every character. Crypto sent to a wrong address cannot be recovered.') }}</flux:label>
+                    <flux:label class="text-sm leading-snug">{{ __('This address belongs to me, it is on the network I chose, and I have checked every character. Crypto sent to a wrong address or network cannot be recovered.') }}</flux:label>
                     <flux:error name="confirmAddress" />
                 </flux:field>
                 <flux:button type="submit" variant="primary">{{ __('Request withdrawal') }}</flux:button>
@@ -107,14 +149,18 @@ new #[Title('Withdraw')] class extends Component {
         <flux:card class="space-y-3 text-sm lg:col-span-2">
             <flux:heading>{{ __('How withdrawals work') }}</flux:heading>
             <ol class="list-decimal space-y-2 pl-5 text-zinc-600 dark:text-zinc-300">
-                <li>{{ __('The amount is held from your balance straight away.') }}</li>
+                <li>{{ __('The USDT amount is held from your balance straight away. For BTC, ETH or SOL, the coin amount is fixed at the price when you ask.') }}</li>
                 <li>{{ __('An admin reviews the request.') }}</li>
-                <li>{{ __('If approved, we send the BTC to your address and show you the transaction ID.') }}</li>
+                <li>{{ __('If approved, we send the coin you chose to your address and show you the transaction ID.') }}</li>
                 <li>{{ __('If rejected, the full amount returns to your balance.') }}</li>
             </ol>
         </flux:card>
     </div>
 
+    <x-coin-converter />
+
+    @island
+    <div wire:poll.20s data-live-history>
     <flux:card class="!p-0 overflow-hidden">
         <div class="px-4 pt-4"><flux:heading>{{ __('Your withdrawals') }}</flux:heading></div>
         <flux:table :paginate="$this->withdrawals" class="[&_td]:px-4! [&_th]:px-4!">
@@ -128,12 +174,18 @@ new #[Title('Withdraw')] class extends Component {
                 @forelse ($this->withdrawals as $withdrawal)
                     <flux:table.row :key="$withdrawal->id">
                         <flux:table.cell>{{ $withdrawal->created_at->format('M j, Y g:i A') }}</flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$withdrawal->amount_sats" /></flux:table.cell>
-                        <flux:table.cell class="font-mono text-xs">{{ Str::limit($withdrawal->btc_address, 14, '…') }}{{ substr($withdrawal->btc_address, -6) }}</flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">
+                            <span class="font-medium tabular-nums">{{ $withdrawal->payoutLabel() }}</span> <a href="{{ $withdrawal->receiptUrl() }}" class="font-mono text-[11px] text-brand-600 underline">{{ $withdrawal->code() }}</a>
+                            @if ($withdrawal->coin !== 'USDT') <p class="text-xs text-zinc-500"><x-usdt :micros="$withdrawal->amount_micros" /></p> @endif
+                        </flux:table.cell>
+                        <flux:table.cell class="font-mono text-xs">
+                            <flux:badge size="sm" class="me-1">{{ $withdrawal->network->shortLabel() }}</flux:badge>
+                            {{ Str::limit($withdrawal->address, 10, '…') }}{{ substr($withdrawal->address, -6) }}
+                        </flux:table.cell>
                         <flux:table.cell>
                             <flux:badge size="sm" :color="$withdrawal->status->color()">{{ $withdrawal->status->label() }}</flux:badge>
-                            @if ($withdrawal->payout_txid)
-                                <a href="{{ Setting::get('explorer_tx_url').$withdrawal->payout_txid }}" target="_blank" rel="noopener" class="mt-1 block text-xs underline">{{ __('View payment') }}</a>
+                            @if ($url = $withdrawal->payoutUrl())
+                                <a href="{{ $url }}" target="_blank" rel="noopener" class="mt-1 block text-xs underline">{{ __('View payment') }}</a>
                             @endif
                             @if ($withdrawal->admin_note)
                                 <p class="mt-1 max-w-56 truncate text-xs text-zinc-500">{{ $withdrawal->admin_note }}</p>
@@ -148,4 +200,6 @@ new #[Title('Withdraw')] class extends Component {
             </flux:table.rows>
         </flux:table>
     </flux:card>
+    </div>
+    @endisland
 </div>

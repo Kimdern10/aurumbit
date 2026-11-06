@@ -3,31 +3,34 @@
 use App\Enums\LedgerType;
 use App\Models\Setting;
 use App\Models\User;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Referrals')] class extends Component {
+    use WithPagination;
+
     /**
-     * @return Collection<int, User>
+     * @return LengthAwarePaginator<int, User>
      */
     #[Computed]
-    public function referrals(): Collection
+    public function referrals(): LengthAwarePaginator
     {
-        return Auth::user()->referrals()->latest()->get(['id', 'name', 'created_at']);
+        return Auth::user()->referrals()->latest()->paginate(15, ['id', 'name', 'created_at']);
     }
 
     #[Computed]
     public function bonusSats(): int
     {
-        return (int) Auth::user()->ledgerEntries()->where('type', LedgerType::ReferralBonus)->sum('amount_sats');
+        return (int) Auth::user()->ledgerEntries()->where('type', LedgerType::ReferralBonus)->sum('amount_micros');
     }
 };
 ?>
 
-<div class="max-w-4xl space-y-6">
+<div wire:poll.20s data-live-page class="max-w-4xl space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Referrals') }}</flux:heading>
         <flux:text class="mt-1">{{ __('Invite friends with your link. When someone you invited has their first deposit approved, you get a bonus of :percent% of it.', ['percent' => rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2), '0'), '.')]) }}</flux:text>
@@ -43,8 +46,8 @@ new #[Title('Referrals')] class extends Component {
     </flux:card>
 
     <div class="grid gap-4 sm:grid-cols-2">
-        <x-stat-card :label="__('People invited')" icon="users">{{ $this->referrals->count() }}</x-stat-card>
-        <x-stat-card :label="__('Bonuses earned')" icon="gift"><x-btc :sats="$this->bonusSats" /></x-stat-card>
+        <x-stat-card :label="__('People invited')" icon="users">{{ $this->referrals->total() }}</x-stat-card>
+        <x-stat-card :label="__('Bonuses earned')" icon="gift"><x-usdt :micros="$this->bonusSats" /></x-stat-card>
     </div>
 
     <flux:card>
@@ -59,6 +62,9 @@ new #[Title('Referrals')] class extends Component {
                 <li class="py-2.5 text-sm text-zinc-500">{{ __('Nobody yet. Share your link to get started.') }}</li>
             @endforelse
         </ul>
+        @if ($this->referrals->hasPages())
+            <flux:pagination :paginator="$this->referrals" class="mt-3 border-t border-zinc-100 pt-3 dark:border-white/10" />
+        @endif
     </flux:card>
 
     <flux:text class="text-xs">{{ __('Please share responsibly and do not spam.') }}</flux:text>

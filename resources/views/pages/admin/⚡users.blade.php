@@ -14,7 +14,15 @@ new #[Title('Users')] class extends Component {
     #[Url]
     public string $search = '';
 
+    #[Url]
+    public string $status = 'all';
+
     public function updatedSearch(): void
+    {
+        $this->resetPage();
+    }
+
+    public function updatedStatus(): void
     {
         $this->resetPage();
     }
@@ -31,6 +39,11 @@ new #[Title('Users')] class extends Component {
                 ->where('name', 'like', '%'.$this->search.'%')
                 ->orWhere('email', 'like', '%'.$this->search.'%')
                 ->orWhere('referral_code', $this->search)))
+            ->when($this->status === 'banned', fn ($query) => $query->whereNotNull('banned_at'))
+            ->when($this->status === 'suspended', fn ($query) => $query->whereNull('banned_at')->where('is_suspended', true)
+                ->where(fn ($inner) => $inner->whereNull('suspended_until')->orWhere('suspended_until', '>', now())))
+            ->when($this->status === 'active', fn ($query) => $query->whereNull('banned_at')
+                ->where(fn ($inner) => $inner->where('is_suspended', false)->orWhere('suspended_until', '<=', now())))
             ->latest()
             ->paginate(20);
     }
@@ -40,7 +53,15 @@ new #[Title('Users')] class extends Component {
 <div class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <flux:heading size="xl">{{ __('Users') }}</flux:heading>
-        <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search name, email or code')" class="sm:max-w-72" />
+        <div class="flex w-full flex-wrap gap-2 sm:w-auto">
+            <flux:select wire:model.live="status" class="sm:max-w-40">
+                <flux:select.option value="all">{{ __('All users') }}</flux:select.option>
+                <flux:select.option value="active">{{ __('Active') }}</flux:select.option>
+                <flux:select.option value="suspended">{{ __('Suspended') }}</flux:select.option>
+                <flux:select.option value="banned">{{ __('Banned') }}</flux:select.option>
+            </flux:select>
+            <flux:input wire:model.live.debounce.300ms="search" icon="magnifying-glass" :placeholder="__('Search name, email or code')" class="sm:max-w-72" />
+        </div>
     </div>
 
     <flux:card class="!p-0 overflow-hidden">
@@ -58,11 +79,11 @@ new #[Title('Users')] class extends Component {
                         <flux:table.cell>
                             <p class="font-medium text-zinc-900 dark:text-white">{{ $user->name }}
                                 @if ($user->is_admin) <flux:badge size="sm" color="yellow" class="ms-1">{{ __('Admin') }}</flux:badge> @endif
-                                @if ($user->is_suspended) <flux:badge size="sm" color="red" class="ms-1">{{ __('Suspended') }}</flux:badge> @endif
+                                <x-account-status-badge :user="$user" class="ms-1" />
                             </p>
                             <p class="text-xs text-zinc-500">{{ $user->email }}</p>
                         </flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$user->balance_sats" /></flux:table.cell>
+                        <flux:table.cell><x-usdt :micros="$user->balance_micros" /></flux:table.cell>
                         <flux:table.cell>
                             @if ($user->kycStatus())
                                 <flux:badge size="sm" :color="$user->kycStatus()->color()">{{ $user->kycStatus()->label() }}</flux:badge>

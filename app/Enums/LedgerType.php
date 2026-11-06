@@ -15,6 +15,7 @@ enum LedgerType: string
     case Earning = 'earning';
     case ReferralBonus = 'referral_bonus';
     case Adjustment = 'adjustment';
+    case Conversion = 'conversion';
 
     public function label(): string
     {
@@ -27,6 +28,7 @@ enum LedgerType: string
             self::Earning => 'Earnings',
             self::ReferralBonus => 'Referral bonus',
             self::Adjustment => 'Balance adjustment',
+            self::Conversion => 'Converted to USDT',
         };
     }
 }

@@ -2,13 +2,16 @@
 
 use App\Models\Announcement;
 use Flux\Flux;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Validation\Rule;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Announcements')] class extends Component {
+    use WithPagination;
+
     public ?int $editingId = null;
 
     public bool $showForm = false;
@@ -22,12 +25,12 @@ new #[Title('Announcements')] class extends Component {
     public bool $isPublished = true;
 
     /**
-     * @return Collection<int, Announcement>
+     * @return LengthAwarePaginator<int, Announcement>
      */
     #[Computed]
-    public function announcements(): Collection
+    public function announcements(): LengthAwarePaginator
     {
-        return Announcement::query()->latest()->get();
+        return Announcement::query()->latest()->paginate(10);
     }
 
     public function create(): void
@@ -108,6 +111,8 @@ new #[Title('Announcements')] class extends Component {
             <flux:text>{{ __('No announcements yet.') }}</flux:text>
         @endforelse
     </div>
+
+    <flux:pagination :paginator="$this->announcements" />
 
     <flux:modal wire:model.self="showForm" class="w-full max-w-lg">
         <form wire:submit="save" class="space-y-4">

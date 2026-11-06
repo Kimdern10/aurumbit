@@ -4,8 +4,10 @@ namespace App\Models;
 
 use App\Enums\InvestmentStatus;
 use App\Enums\KycStatus;
+use App\Support\EmailVerificationCode;
 use Carbon\CarbonInterface;
 use Database\Factories\UserFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -28,7 +30,12 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  * @property string $password
  * @property bool $is_admin
  * @property bool $is_suspended
- * @property int $balance_sats
+ * @property CarbonInterface|null $suspended_until
+ * @property string|null $suspension_reason
+ * @property CarbonInterface|null $banned_at
+ * @property string|null $ban_reason
+ * @property bool $email_notifications
+ * @property int $balance_micros
  * @property string $referral_code
  * @property int|null $referred_by_id
  * @property string|null $two_factor_secret
@@ -42,7 +49,7 @@ use Laravel\Fortify\TwoFactorAuthenticatable;
  */
 #[Fillable(['name', 'email', 'password'])]
 #[Hidden(['password', 'two_factor_secret', 'two_factor_recovery_codes', 'remember_token'])]
-class User extends Authenticatable implements PasskeyUser
+class User extends Authenticatable implements MustVerifyEmail, PasskeyUser
 {
     /** @use HasFactory<UserFactory> */
     use HasFactory, Notifiable, PasskeyAuthenticatable, TwoFactorAuthenticatable;
@@ -50,7 +57,7 @@ class User extends Authenticatable implements PasskeyUser
     /**
      * @var array<string, mixed>
      */
-    protected $attributes = ['is_admin' => false, 'is_suspended' => false, 'balance_sats' => 0];
+    protected $attributes = ['is_admin' => false, 'is_suspended' => false, 'balance_micros' => 0, 'email_notifications' => true];
 
     /**
      * Give every new user a referral code.
@@ -85,8 +92,81 @@ class User extends Authenticatable implements PasskeyUser
             'password' => 'hashed',
             'is_admin' => 'boolean',
             'is_suspended' => 'boolean',
-            'balance_sats' => 'integer',
+            'suspended_until' => 'datetime',
+            'banned_at' => 'datetime',
+            'email_notifications' => 'boolean',
+            'balance_micros' => 'integer',
         ];
+    }
+
+    public function isBanned(): bool
+    {
+        return $this->banned_at !== null;
+    }
+
+    /**
+     * Suspended right now. A suspension with an end date lifts itself once that date passes.
+     */
+    public function isSuspended(): bool
+    {
+        return $this->is_suspended && ($this->suspended_until === null || $this->suspended_until->isFuture());
+    }
+
+    /**
+     * Banned or suspended, so the user cannot use their account.
+     */
+    public function isBlocked(): bool
+    {
+        return $this->isBanned() || $this->isSuspended();
+    }
+
+    /**
+     * Suspend the account, until a date or until an admin lifts it.
+     */
+    public function suspend(?CarbonInterface $until, ?string $reason): void
+    {
+        $this->forceFill(['is_suspended' => true, 'suspended_until' => $until, 'suspension_reason' => $reason])->save();
+    }
+
+    /**
+     * Close the account for good. The balance and history are kept.
+     */
+    public function ban(?string $reason): void
+    {
+        $this->forceFill(['banned_at' => now(), 'ban_reason' => $reason])->save();
+    }
+
+    /**
+     * Lift a suspension or a ban.
+     */
+    public function restore(): void
+    {
+        $this->forceFill(['is_suspended' => false, 'suspended_until' => null, 'suspension_reason' => null, 'banned_at' => null, 'ban_reason' => null])->save();
+    }
+
+    /**
+     * What the user is told when they are signed out because of a ban or suspension.
+     */
+    public function blockedMessage(): string
+    {
+        $status = match (true) {
+            $this->isBanned() => __('This account has been banned.'),
+            $this->suspended_until !== null => __('This account is suspended until :date.', ['date' => $this->suspended_until->format('M j, Y g:i A')]),
+            default => __('This account is suspended.'),
+        };
+
+        $reason = $this->isBanned() ? $this->ban_reason : $this->suspension_reason;
+
+        return $status.($reason ? ' '.__('Reason: :reason', ['reason' => rtrim($reason, '. ').'.']) : '').' '.__('Please contact support.');
+    }
+
+    /**
+     * Email a six-digit code instead of Laravel's default verification link.
+     * Called after sign-up and when the user asks for a new code.
+     */
+    public function sendEmailVerificationNotification(): void
+    {
+        EmailVerificationCode::send($this);
     }
 
     /**
@@ -183,7 +263,7 @@ class User extends Authenticatable implements PasskeyUser
      */
     public function investedSats(): int
     {
-        return (int) $this->investments()->where('status', InvestmentStatus::Active)->sum('amount_sats');
+        return (int) $this->investments()->where('status', InvestmentStatus::Active)->sum('amount_micros');
     }
 
     /**

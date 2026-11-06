@@ -1,6 +1,6 @@
 <x-layouts::auth :title="__('Register')">
-    <div class="flex flex-col gap-6">
-        <x-auth-header :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
+    <div class="flex flex-col gap-7">
+        <x-auth-header :eyebrow="__('Get started')" :title="__('Create an account')" :description="__('Enter your details below to create your account')" />
 
         <!-- Session Status -->
         <x-auth-session-status class="text-center" :status="session('status')" />
@@ -54,11 +54,21 @@
                 viewable
             />
 
-            <input type="hidden" name="ref" value="{{ old('ref', request('ref')) }}">
-
-            @if (filled(old('ref', request('ref'))))
-                <flux:text class="-mt-2 text-sm">{{ __('Invited with code :code', ['code' => strtoupper(old('ref', request('ref')))]) }}</flux:text>
-            @endif
+            <!-- Referral code: filled in from an invite link (?ref=CODE), or typed in -->
+            <flux:input
+                name="ref"
+                :label="__('Referral code (optional)')"
+                :value="strtoupper((string) old('ref', request('ref')))"
+                type="text"
+                autocomplete="off"
+                autocapitalize="characters"
+                spellcheck="false"
+                maxlength="16"
+                :placeholder="__('e.g. EMMA2026')"
+                :description="__('Invited by someone? Enter their code so they get their bonus.')"
+                class="font-mono uppercase"
+                data-test="referral-code"
+            />
 
             <flux:field variant="inline">
                 <flux:checkbox name="terms" value="1" :checked="(bool) old('terms')" required />
@@ -73,14 +83,12 @@
                 <flux:error name="terms" />
             </flux:field>
 
-            <div class="flex items-center justify-end">
-                <flux:button type="submit" variant="primary" class="w-full" data-test="register-user-button">
-                    {{ __('Create account') }}
-                </flux:button>
-            </div>
+            <flux:button type="submit" variant="primary" icon:trailing="arrow-right" class="mt-1 h-11! w-full rounded-full! text-[0.95rem]!" data-test="register-user-button">
+                {{ __('Create account') }}
+            </flux:button>
         </form>
 
-        <div class="space-x-1 rtl:space-x-reverse text-center text-sm text-zinc-600 dark:text-zinc-400">
+        <div class="space-x-1 border-t border-ink-100 pt-6 text-center text-sm text-ink-500 rtl:space-x-reverse dark:border-white/10 dark:text-ink-400">
             <span>{{ __('Already have an account?') }}</span>
             <flux:link :href="route('login')" wire:navigate>{{ __('Log in') }}</flux:link>
         </div>

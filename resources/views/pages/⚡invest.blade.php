@@ -4,16 +4,20 @@ use App\Enums\PlanCategory;
 use App\Exceptions\WalletException;
 use App\Models\Plan;
 use App\Services\WalletService;
-use App\Support\Btc;
+use App\Support\Usdt;
 use Flux\Flux;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
+use Livewire\WithPagination;
 
 new #[Title('Plans')] class extends Component {
+    use WithPagination;
+
     public ?int $planId = null;
 
     public string $amount = '';
@@ -54,16 +58,21 @@ new #[Title('Plans')] class extends Component {
     }
 
     /**
-     * The plans in the chosen tab.
+     * The plans in the chosen tab, 9 per page.
      *
-     * @return Collection<int, Plan>
+     * @return LengthAwarePaginator<int, Plan>
      */
     #[Computed]
-    public function shownPlans(): Collection
+    public function shownPlans(): LengthAwarePaginator
     {
-        $category = PlanCategory::tryFrom($this->category);
+        return Plan::query()->available()
+            ->when(PlanCategory::tryFrom($this->category), fn ($query, PlanCategory $category) => $query->where('category', $category))
+            ->paginate(9);
+    }
 
-        return $category ? $this->plans->where('category', $category)->values() : $this->plans;
+    public function updatedCategory(): void
+    {
+        $this->resetPage();
     }
 
     #[Computed]
@@ -76,7 +85,7 @@ new #[Title('Plans')] class extends Component {
     {
         $this->resetValidation();
         $this->planId = $planId;
-        $this->amount = $this->selectedPlan ? Btc::format($this->selectedPlan->min_sats) : '';
+        $this->amount = $this->selectedPlan ? Usdt::format($this->selectedPlan->min_micros) : '';
         $this->acceptRisk = false;
         $this->showModal = true;
     }
@@ -87,15 +96,15 @@ new #[Title('Plans')] class extends Component {
         abort_if($plan === null, 404);
 
         $this->validate([
-            'amount' => ['required', 'regex:'.Btc::INPUT_PATTERN],
+            'amount' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
             'acceptRisk' => ['accepted'],
         ], [
-            'amount.regex' => __('Enter an amount in BTC, with up to 8 decimal places.'),
+            'amount.regex' => __('Enter an amount in USDT, with up to 2 decimal places.'),
             'acceptRisk.accepted' => __('Please confirm before investing.'),
         ]);
 
         try {
-            $wallet->invest(Auth::user(), $plan, (int) Btc::toSats($this->amount));
+            $wallet->invest(Auth::user(), $plan, (int) Usdt::toMicros($this->amount));
         } catch (WalletException $exception) {
             $this->addError('amount', $exception->getMessage());
 
@@ -112,7 +121,7 @@ new #[Title('Plans')] class extends Component {
 <div class="space-y-6">
     <div>
         <flux:heading size="xl">{{ __('Plans') }}</flux:heading>
-        <flux:text class="mt-1">{{ __('Available balance:') }} <x-btc :sats="auth()->user()->balance_sats" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
+        <flux:text class="mt-1">{{ __('Available balance:') }} <x-usdt :micros="auth()->user()->balance_micros" class="font-semibold text-zinc-900 dark:text-white" /></flux:text>
     </div>
 
     <flux:callout color="blue" icon="information-circle">
@@ -126,6 +135,8 @@ new #[Title('Plans')] class extends Component {
         </div>
     @endif
 
+    <x-coin-converter />
+
     <div class="-mx-1 flex gap-2 overflow-x-auto px-1 pb-1">
         @foreach ($this->tabs as $value => $label)
             <button type="button" wire:click="$set('category', '{{ $value }}')" wire:key="tab-{{ $value ?: 'all' }}"
@@ -135,13 +146,14 @@ new #[Title('Plans')] class extends Component {
         @endforeach
     </div>
 
-    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+    <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3" data-prices-url="{{ route('prices') }}">
         @forelse ($this->shownPlans as $plan)
             <flux:card wire:key="plan-{{ $plan->id }}" class="flex flex-col">
                 <div class="flex items-start justify-between gap-3">
                     <div>
                         <flux:badge size="sm" :color="$plan->category->badgeColor()">{{ $plan->category->label() }}</flux:badge>
                         <flux:heading size="lg" class="mt-2">{{ $plan->name }}</flux:heading>
+                        <x-coin-price :category="$plan->category" class="mt-1" />
                     </div>
                     <span class="text-right"><span class="block font-display text-2xl font-extrabold text-zinc-900 dark:text-white">{{ $plan->targetPercent() }}%</span><span class="text-xs text-zinc-500">{{ __('in :days days', ['days' => $plan->duration_days]) }}</span></span>
                 </div>
@@ -149,9 +161,18 @@ new #[Title('Plans')] class extends Component {
                 <dl class="mt-4 grid grid-cols-2 gap-3 text-sm">
                     <div><dt class="text-xs text-zinc-500">{{ __('Term') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">{{ trans_choice(':count day|:count days', $plan->duration_days) }}</dd></div>
                     <div><dt class="text-xs text-zinc-500">{{ __('Rate') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">{{ $plan->targetPercent() }}% <span class="text-xs font-normal text-zinc-500">({{ $plan->dailyPercent() }}% {{ __('a day') }})</span></dd></div>
-                    <div><dt class="text-xs text-zinc-500">{{ __('Minimum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white"><x-btc :sats="$plan->min_sats" /></dd></div>
-                    <div><dt class="text-xs text-zinc-500">{{ __('Maximum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">@if ($plan->max_sats)<x-btc :sats="$plan->max_sats" />@else{{ __('No limit') }}@endif</dd></div>
+                    <div><dt class="text-xs text-zinc-500">{{ __('Minimum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white"><x-usdt :micros="$plan->min_micros" /></dd></div>
+                    <div><dt class="text-xs text-zinc-500">{{ __('Maximum') }}</dt><dd class="font-medium text-zinc-900 dark:text-white">@if ($plan->max_micros)<x-usdt :micros="$plan->max_micros" />@else{{ __('No limit') }}@endif</dd></div>
                 </dl>
+                @php
+                    $example = min(max($plan->min_micros, 1_000 * Usdt::MICROS_PER_USDT), $plan->max_micros ?? PHP_INT_MAX);
+                    $exampleTotal = $example + $plan->profitFor($example);
+                    $examplePrice = $plan->category->priceKey() && $plan->category !== PlanCategory::Gold ? app(\App\Services\MarketPrices::class)->cached()[$plan->category->priceKey().'_cents'] : null;
+                @endphp
+                <p class="mt-4 rounded-lg bg-zinc-50 px-3 py-2 text-xs leading-relaxed text-zinc-600 dark:bg-white/5 dark:text-zinc-300" data-plan-example>
+                    {{ __('Example: :amount USDT', ['amount' => Usdt::format($example)]) }}@if ($examplePrice) {{ __('(≈ :coin :ticker today)', ['coin' => \App\Support\Btc::format(Usdt::toCoinUnits($example, $examplePrice), fixed: true), 'ticker' => $plan->category->ticker()]) }}@endif
+                    {{ __('returns :total USDT after :days days', ['total' => Usdt::format($exampleTotal), 'days' => $plan->duration_days]) }}@if ($examplePrice), {{ __('or ≈ :coin :ticker if paid in :ticker', ['coin' => \App\Support\Btc::format(Usdt::toCoinUnits($exampleTotal, $examplePrice), fixed: true), 'ticker' => $plan->category->ticker()]) }}@endif.
+                </p>
                 <div class="mt-auto pt-5">
                     <flux:button wire:click="choose({{ $plan->id }})" variant="primary" class="w-full">{{ __('Invest') }}</flux:button>
                 </div>
@@ -161,31 +182,40 @@ new #[Title('Plans')] class extends Component {
         @endforelse
     </div>
 
+    @if ($this->shownPlans->hasPages())
+        <flux:pagination :paginator="$this->shownPlans" />
+    @endif
+
     <flux:modal wire:model.self="showModal" class="w-full max-w-md">
         @if ($this->selectedPlan)
             @php
                 $plan = $this->selectedPlan;
-                $sats = Btc::toSats($amount);
+                $micros = Usdt::toMicros($amount);
             @endphp
             <form wire:submit="invest" class="space-y-5">
                 <div>
                     <flux:heading size="lg">{{ $plan->name }}</flux:heading>
                     <flux:text class="mt-1 text-sm">{{ trans_choice(':count day term|:count days term', $plan->duration_days) }} · {{ __(':rate% total', ['rate' => $plan->targetPercent()]) }}</flux:text>
+                    <x-coin-price :category="$plan->category" class="mt-1" />
                 </div>
 
-                <flux:input wire:model.live.debounce.400ms="amount" :label="__('Amount (BTC)')" inputmode="decimal" autocomplete="off"
-                    :description="__('Between :min and :max BTC. Available: :balance BTC', ['min' => Btc::format($plan->min_sats), 'max' => $plan->max_sats ? Btc::format($plan->max_sats) : '∞', 'balance' => Btc::format(auth()->user()->balance_sats)])" />
+                <flux:input wire:model.live.debounce.400ms="amount" :label="__('Amount (USDT)')" inputmode="decimal" autocomplete="off"
+                    :description="__('Between :min and :max USDT. Available: :balance USDT', ['min' => Usdt::format($plan->min_micros), 'max' => $plan->max_micros ? Usdt::format($plan->max_micros) : '∞', 'balance' => Usdt::format(auth()->user()->balance_micros)])" />
 
-                @if ($sats)
-                    @php($profit = $plan->profitFor($sats))
+                @if ($micros)
+                    @php($profit = $plan->profitFor($micros))
                     <dl class="space-y-1.5 rounded-lg bg-zinc-50 p-3 text-sm dark:bg-white/5">
                         <div class="flex justify-between"><dt>{{ __('Rate') }}</dt><dd>{{ $plan->targetPercent() }}% {{ __('for :days days', ['days' => $plan->duration_days]) }}</dd></div>
-                        <div class="flex justify-between"><dt>{{ __('Earned per day') }}</dt><dd><x-btc :sats="intdiv($profit, $plan->duration_days)" /></dd></div>
-                        <div class="flex justify-between"><dt>{{ __('Profit at the end') }}</dt><dd><x-btc :sats="$profit" signed class="text-green-600 dark:text-green-400" /></dd></div>
-                        <div class="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold text-zinc-900 dark:border-white/10 dark:text-white"><dt>{{ __('You receive on :date', ['date' => now()->addDays($plan->duration_days)->format('M j, Y')]) }}</dt><dd><x-btc :sats="$sats + $profit" /></dd></div>
+                        <div class="flex justify-between"><dt>{{ __('Earned per day') }}</dt><dd><x-usdt :micros="intdiv($profit, $plan->duration_days)" /></dd></div>
+                        <div class="flex justify-between"><dt>{{ __('Profit at the end') }}</dt><dd><x-usdt :micros="$profit" signed class="text-green-600 dark:text-green-400" /></dd></div>
+                        <div class="flex justify-between border-t border-zinc-200 pt-1.5 font-semibold text-zinc-900 dark:border-white/10 dark:text-white"><dt>{{ __('You receive on :date', ['date' => now()->addDays($plan->duration_days)->format('M j, Y')]) }}</dt><dd><x-usdt :micros="$micros + $profit" /></dd></div>
                     </dl>
-                    @if ($plan->category === PlanCategory::Gold && ($goldMg = app(\App\Services\MarketPrices::class)->goldMilligrams($sats)))
-                        <flux:text class="text-sm">{{ __('Your :amount BTC is worth about :ounces oz (:grams g) of gold at today\'s price.', ['amount' => Btc::format($sats), 'ounces' => number_format($goldMg / 31103.4768, 3), 'grams' => number_format($goldMg / 1000, 2)]) }}</flux:text>
+                    @php($coinPriceCents = $plan->category->priceKey() && $plan->category !== PlanCategory::Gold ? app(\App\Services\MarketPrices::class)->cached()[$plan->category->priceKey().'_cents'] : null)
+                    @if ($coinPriceCents)
+                        <flux:text class="text-sm">{{ __('At today\'s price you receive about :coin :ticker. You choose USDT or :ticker when you withdraw.', ['coin' => \App\Support\Btc::format(Usdt::toCoinUnits($micros + $profit, $coinPriceCents)), 'ticker' => $plan->category->ticker()]) }}</flux:text>
+                    @endif
+                    @if ($plan->category === PlanCategory::Gold && ($goldMg = app(\App\Services\MarketPrices::class)->goldMilligrams($micros)))
+                        <flux:text class="text-sm">{{ __('Your :amount USDT is worth about :ounces oz (:grams g) of gold at today\'s price.', ['amount' => Usdt::format($micros), 'ounces' => number_format($goldMg / 31103.4768, 3), 'grams' => number_format($goldMg / 1000, 2)]) }}</flux:text>
                     @endif
                 @endif
 

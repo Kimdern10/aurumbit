@@ -3,7 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\LedgerEntry;
-use App\Support\Btc;
+use App\Support\Usdt;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
@@ -26,15 +26,15 @@ class StatementController extends Controller
                 return;
             }
 
-            fputcsv($out, ['Date', 'Type', 'Details', 'Amount (BTC)', 'Balance after (BTC)']);
+            fputcsv($out, ['Date', 'Type', 'Details', 'Amount (USDT)', 'Balance after (USDT)']);
 
             $user->ledgerEntries()->oldest('id')->lazyById()->each(function (LedgerEntry $entry) use ($out): void {
                 fputcsv($out, [
                     $entry->created_at->format('Y-m-d H:i:s'),
-                    $entry->type->label(),
+                    $entry->label(),
                     $entry->description,
-                    str_replace(',', '', Btc::format($entry->amount_sats, fixed: true)),
-                    str_replace(',', '', Btc::format($entry->balance_after_sats, fixed: true)),
+                    str_replace(',', '', Usdt::format($entry->amount_micros, 6)),
+                    str_replace(',', '', Usdt::format($entry->balance_after_micros, 6)),
                 ]);
             });
 

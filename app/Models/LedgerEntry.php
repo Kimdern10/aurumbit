@@ -17,8 +17,8 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property int $id
  * @property int $user_id
  * @property LedgerType $type
- * @property int $amount_sats
- * @property int $balance_after_sats
+ * @property int $amount_micros
+ * @property int $balance_after_micros
  * @property string $description
  * @property string|null $subject_type
  * @property int|null $subject_id
@@ -27,7 +27,7 @@ use Illuminate\Database\Eloquent\Relations\MorphTo;
  * @property-read User $user
  * @property-read User|null $actor
  */
-#[Fillable(['user_id', 'type', 'amount_sats', 'balance_after_sats', 'description', 'subject_type', 'subject_id', 'actor_id'])]
+#[Fillable(['user_id', 'type', 'amount_micros', 'balance_after_micros', 'description', 'subject_type', 'subject_id', 'actor_id'])]
 class LedgerEntry extends Model
 {
     /** @use HasFactory<LedgerEntryFactory> */
@@ -42,8 +42,8 @@ class LedgerEntry extends Model
     {
         return [
             'type' => LedgerType::class,
-            'amount_sats' => 'integer',
-            'balance_after_sats' => 'integer',
+            'amount_micros' => 'integer',
+            'balance_after_micros' => 'integer',
             'created_at' => 'datetime',
         ];
     }
@@ -64,6 +64,31 @@ class LedgerEntry extends Model
     public function actor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'actor_id');
+    }
+
+    /**
+     * The name customers see for this change. Admin balance adjustments read
+     * as "Wallet funded" or "Wallet debited" rather than "Balance adjustment".
+     */
+    public function label(): string
+    {
+        if ($this->type === LedgerType::Adjustment) {
+            return $this->amount_micros >= 0 ? 'Wallet funded' : 'Wallet debited';
+        }
+
+        return $this->type->label();
+    }
+
+    /**
+     * The receipt of the deposit or withdrawal behind this change, if there is one.
+     */
+    public function receiptUrl(): ?string
+    {
+        return match ($this->subject_type) {
+            (new Deposit)->getMorphClass() => route('receipts.show', ['kind' => 'deposit', 'id' => $this->subject_id]),
+            (new Withdrawal)->getMorphClass() => route('receipts.show', ['kind' => 'withdrawal', 'id' => $this->subject_id]),
+            default => null,
+        };
     }
 
     /**

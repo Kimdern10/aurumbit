@@ -2,7 +2,7 @@
 
 namespace App\Services;
 
-use App\Support\Btc;
+use App\Support\Usdt;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Support\Facades\Cache;
 use Illuminate\Support\Facades\Http;
@@ -13,7 +13,8 @@ use Illuminate\Support\Facades\Http;
  * troy ounce of gold.
  *
  * Prices are for display only; no balance is ever worked out from them.
- * Responses are cached for five minutes, and the last good answer is kept so
+ * Responses are cached for a minute (refreshed every minute by the
+ * app:refresh-market-prices schedule), and the last good answer is kept so
  * the site still shows a price when the API is slow or down.
  *
  * @phpstan-type Prices array{btc_cents: int|null, btc_change: float|null, gold_cents: int|null, gold_change: float|null, eth_cents: int|null, eth_change: float|null, sol_cents: int|null, sol_change: float|null, updated_at: string|null}
@@ -27,7 +28,7 @@ class MarketPrices
 
     public const string URL = 'https://api.coingecko.com/api/v3/simple/price?ids=bitcoin,pax-gold,ethereum,solana&vs_currencies=usd&include_24hr_change=true';
 
-    private const string CACHE_KEY = 'market-prices';
+    public const string CACHE_KEY = 'market-prices';
 
     private const string LAST_GOOD_KEY = 'market-prices:last-good';
 
@@ -52,7 +53,7 @@ class MarketPrices
         $fresh = $this->fetch();
 
         if ($fresh !== null) {
-            Cache::put(self::CACHE_KEY, $fresh, 300);
+            Cache::put(self::CACHE_KEY, $fresh, 60);
             Cache::forever(self::LAST_GOOD_KEY, $fresh);
 
             return $fresh;
@@ -78,17 +79,17 @@ class MarketPrices
     }
 
     /**
-     * How many milligrams of gold an amount of BTC would buy at current prices.
+     * How many milligrams of gold an amount of USDT would buy at current prices.
      */
-    public function goldMilligrams(int $sats): ?int
+    public function goldMilligrams(int $micros): ?int
     {
         $prices = $this->cached();
 
-        if ($prices['btc_cents'] === null || ! $prices['gold_cents']) {
+        if (! $prices['gold_cents']) {
             return null;
         }
 
-        return intdiv(Btc::usdCents($sats, $prices['btc_cents']) * self::MICROGRAMS_PER_TROY_OUNCE, $prices['gold_cents'] * 1000);
+        return intdiv(Usdt::toUsdCents($micros) * self::MICROGRAMS_PER_TROY_OUNCE, $prices['gold_cents'] * 1000);
     }
 
     /**

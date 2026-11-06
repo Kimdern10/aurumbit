@@ -1,5 +1,6 @@
 <?php
 
+use Flux\Flux;
 use Illuminate\Notifications\DatabaseNotification;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\Auth;
@@ -32,15 +33,31 @@ new #[Title('Notifications')] class extends Component {
         }
     }
 
+    public bool $emailNotifications = true;
+
+    public function mount(): void
+    {
+        $this->emailNotifications = Auth::user()->email_notifications;
+    }
+
     public function markAllRead(): void
     {
         Auth::user()->unreadNotifications->markAsRead();
         unset($this->notifications);
     }
+
+    /**
+     * Turn the email copies of these notifications on or off.
+     */
+    public function updatedEmailNotifications(bool $value): void
+    {
+        Auth::user()->forceFill(['email_notifications' => $value])->save();
+        Flux::toast(text: $value ? __('You will get these updates by email too.') : __('Email updates are off. You will still see them here.'));
+    }
 };
 ?>
 
-<div class="max-w-3xl space-y-6">
+<div wire:poll.20s data-live-page class="max-w-3xl space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Notifications') }}</flux:heading>
@@ -50,6 +67,14 @@ new #[Title('Notifications')] class extends Component {
             <flux:button wire:click="markAllRead" icon="check">{{ __('Mark all as read') }}</flux:button>
         @endif
     </div>
+
+    <flux:card class="flex items-center justify-between gap-4">
+        <div class="min-w-0">
+            <flux:heading>{{ __('Email me these updates') }}</flux:heading>
+            <flux:text class="text-sm">{{ __('Get an email to :email whenever something happens on your account.', ['email' => auth()->user()->email]) }}</flux:text>
+        </div>
+        <flux:switch wire:model.live="emailNotifications" :aria-label="__('Email me these updates')" />
+    </flux:card>
 
     <div class="space-y-2">
         @forelse ($this->notifications as $notification)

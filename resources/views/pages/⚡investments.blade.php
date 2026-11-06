@@ -22,11 +22,11 @@ new #[Title('My investments')] class extends Component {
 };
 ?>
 
-<div class="space-y-6">
+<div wire:poll.20s data-live-page class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('My investments') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Earnings update daily and are paid with your capital at the end of each term.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Earnings are added every day and paid with your capital at the end of each term. This page updates by itself.') }}</flux:text>
         </div>
         <flux:button :href="route('invest')" variant="primary" icon="sparkles" wire:navigate>{{ __('New investment') }}</flux:button>
     </div>
@@ -50,12 +50,19 @@ new #[Title('My investments')] class extends Component {
                                 <p class="text-xs text-amber-700 dark:text-amber-300">{{ __('≈ :grams g of gold at start', ['grams' => number_format($investment->gold_mg / 1000, 3)]) }}</p>
                             @endif
                         </flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$investment->amount_sats" /></flux:table.cell>
+                        <flux:table.cell><x-usdt :micros="$investment->amount_micros" /></flux:table.cell>
                         <flux:table.cell class="min-w-32">
                             <flux:progress :value="$investment->status->value === 'active' ? $investment->progressPercent() : 100" />
                             <p class="mt-1 text-xs text-zinc-500">{{ __('Day :day of :total', ['day' => $investment->elapsedDays(), 'total' => $investment->duration_days]) }}</p>
                         </flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$investment->earned_sats" /></flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap" data-earned-so-far>
+                            @php($earned = $investment->earnedSoFar())
+                            <x-usdt :micros="$earned" :decimals="$earned > 0 && $earned < 1_000_000 ? 4 : 2" class="font-semibold text-green-700 dark:text-green-400" />
+                            <p class="text-xs text-zinc-500">{{ __('of :total USDT profit', ['total' => \App\Support\Usdt::format($investment->totalProfit())]) }}</p>
+                            @if ($next = $investment->nextEarningAt())
+                                <p class="text-xs text-zinc-500">{{ __('+:daily USDT a day · next :when', ['daily' => \App\Support\Usdt::format($investment->dailyEarning(), $investment->dailyEarning() < 1_000_000 ? 4 : 2), 'when' => $next->diffForHumans()]) }}</p>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
                     </flux:table.row>
                 @empty

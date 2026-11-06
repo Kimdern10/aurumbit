@@ -2,8 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Enums\WithdrawalNetwork;
 use App\Models\Announcement;
 use App\Models\Deposit;
+use App\Models\DepositWallet;
 use App\Models\KycSubmission;
 use App\Models\Plan;
 use App\Models\Setting;
@@ -27,8 +29,12 @@ class SampleDataSeeder extends Seeder
 
         $admin = User::factory()->admin()->create(['name' => 'Hashvale Admin', 'email' => 'admin@hashvale.test']);
 
-        // A sample address for local testing only. The real company address is set in Site settings.
-        Setting::put(['deposit_address' => 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq', 'company_details' => 'Hashvale Inc., a Delaware corporation. Registration details to be added.']);
+        Setting::put(['company_details' => 'Hashvale Inc., a Delaware corporation. Registration details to be added.']);
+
+        // Sample addresses for local testing only. The real company wallets are added under Deposit wallets.
+        $usdt = DepositWallet::factory()->create(['sort_order' => 0]);
+        $btc = DepositWallet::factory()->bitcoin()->create(['sort_order' => 1]);
+        DepositWallet::factory()->create(['coin' => 'ETH', 'network' => 'Ethereum', 'address' => '0x742d35Cc6634C0532925a3b844Bc454e4438f44e', 'explorer_tx_url' => 'https://etherscan.io/tx/', 'sort_order' => 2]);
 
         $plans = Plan::query()->get()->keyBy('slug');
 
@@ -42,23 +48,23 @@ class SampleDataSeeder extends Seeder
         $this->kyc($olivia, approved: false);
 
         // Emma: deposits, two plans (one finished), a paid withdrawal and a pending one.
-        $this->at(40, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 25_000_000, str_repeat('a1', 32)), $admin));
-        $this->at(38, fn () => $wallet->invest($emma, $plans['bitcoin-starter'], 5_000_000));
-        $this->at(30, fn () => $wallet->invest($emma, $plans['gold-plus'], 8_000_000));
+        $this->at(40, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, $usdt, '20000', str_repeat('a1', 32)), $admin, 20_000_000_000));
+        $this->at(38, fn () => $wallet->invest($emma, $plans['bitcoin-starter'], 4_000_000_000));
+        $this->at(30, fn () => $wallet->invest($emma, $plans['gold-plus'], 6_500_000_000));
         $this->at(23, fn () => $wallet->settle($emma->investments()->where('plan_id', $plans['bitcoin-starter']->id)->firstOrFail()));
-        $this->at(20, fn () => $wallet->approveWithdrawal($wallet->requestWithdrawal($emma, 2_000_000, 'bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq'), $admin, str_repeat('e5', 32)));
-        $this->at(12, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, 10_000_000, str_repeat('b2', 32)), $admin));
-        $this->at(6, fn () => $wallet->invest($emma, $plans['bitcoin-plus'], 6_000_000));
-        $this->at(1, fn () => $wallet->requestWithdrawal($emma, 1_500_000, '3J98t1WpEZ73CNmQviecrnyiWrnqRhWNLy'));
+        $this->at(20, fn () => $wallet->approveWithdrawal($wallet->requestWithdrawal($emma, 1_500_000_000, WithdrawalNetwork::Trc20, 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'), $admin, str_repeat('e5', 32)));
+        $this->at(12, fn () => $wallet->approveDeposit($wallet->requestDeposit($emma, $btc, '0.1', str_repeat('b2', 32)), $admin, 7_672_800_000));
+        $this->at(6, fn () => $wallet->invest($emma, $plans['bitcoin-plus'], 5_000_000_000));
+        $this->at(1, fn () => $wallet->requestWithdrawal($emma, 1_200_000_000, WithdrawalNetwork::Erc20, '0x742d35Cc6634C0532925a3b844Bc454e4438f44e'));
 
         // James (invited by Emma): first deposit pays Emma a referral bonus.
-        $this->at(15, fn () => $wallet->approveDeposit($wallet->requestDeposit($james, 12_000_000, str_repeat('d4', 32)), $admin));
-        $this->at(14, fn () => $wallet->invest($james, $plans['gold-starter'], 4_000_000));
-        $this->at(3, fn () => $wallet->rejectWithdrawal($wallet->requestWithdrawal($james, 1_000_000, 'bc1p5d7rjq7g6rdk2yhzks9smlaqtedr4dekq08ge8ztwac72sfr9rusxg3297'), $admin, 'Please confirm this address belongs to you.'));
+        $this->at(15, fn () => $wallet->approveDeposit($wallet->requestDeposit($james, $usdt, '9500', str_repeat('d4', 32)), $admin, 9_500_000_000));
+        $this->at(14, fn () => $wallet->invest($james, $plans['gold-starter'], 3_000_000_000));
+        $this->at(3, fn () => $wallet->rejectWithdrawal($wallet->requestWithdrawal($james, 800_000_000, WithdrawalNetwork::Trc20, 'TR7NHqjeKQxGTCi8q8ZY4pL8otSzgjLj6t'), $admin, 'Please confirm this address belongs to you.'));
 
         // Waiting for the admin.
-        $this->at(2, fn () => $wallet->requestDeposit($olivia, 3_000_000, str_repeat('c3', 32)));
-        $this->at(0, fn () => Deposit::factory()->for($james)->create(['amount_sats' => 750_000]));
+        $this->at(2, fn () => $wallet->requestDeposit($olivia, $btc, '0.03', str_repeat('c3', 32)));
+        $this->at(0, fn () => Deposit::factory()->for($james)->create(['deposit_wallet_id' => $usdt->id, 'coin_amount' => '600']));
 
         $wallet->accrue($emma->investments()->where('plan_id', $plans['gold-plus']->id)->firstOrFail());
         $wallet->accrue($emma->investments()->where('plan_id', $plans['bitcoin-plus']->id)->firstOrFail());

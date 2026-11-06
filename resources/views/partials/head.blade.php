@@ -27,4 +27,6 @@
 @fonts
 
 @vite(['resources/css/app.css', 'resources/js/app.js'])
+{{-- Light is the default look. Flux keeps the visitor's own choice once they pick one with the theme toggle. --}}
+<script>try { if (! localStorage.getItem('flux.appearance')) { localStorage.setItem('flux.appearance', 'light'); } } catch (e) {}</script>
 @fluxAppearance

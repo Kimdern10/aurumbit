@@ -9,28 +9,28 @@ use Illuminate\Support\Facades\Cache;
 use Livewire\Livewire;
 
 test('users can invest in every kind of plan, including gold', function (PlanCategory $category) {
-    $user = User::factory()->withBalance(5_000_000)->create();
-    $plan = Plan::factory()->create(['category' => $category, 'min_sats' => 100_000]);
+    $user = User::factory()->withBalance(5_000_000_000)->create();
+    $plan = Plan::factory()->create(['category' => $category, 'min_micros' => 50_000_000]);
 
     Livewire::actingAs($user)->test('pages::invest')
         ->call('choose', $plan->id)
-        ->set('amount', '0.01')
+        ->set('amount', '100')
         ->set('acceptRisk', true)
         ->call('invest')
         ->assertHasNoErrors();
 
     expect(Investment::query()->sole()->plan->category)->toBe($category)
-        ->and($user->fresh()->balance_sats)->toBe(4_000_000);
+        ->and($user->fresh()->balance_micros)->toBe(4_900_000_000);
 })->with(PlanCategory::cases());
 
 test('gold plans show and record the gold value of the investment', function () {
     Cache::put('market-prices', ['btc_cents' => 6_000_000, 'gold_cents' => 250_000, 'updated_at' => now()->toIso8601String()], 300);
-    $user = User::factory()->withBalance(100_000_000)->create();
-    $plan = Plan::factory()->gold()->create(['min_sats' => 100_000, 'max_sats' => null]);
+    $user = User::factory()->withBalance(100_000_000_000)->create();
+    $plan = Plan::factory()->gold()->create(['min_micros' => 100_000, 'max_micros' => null]);
 
     Livewire::actingAs($user)->test('pages::invest')
         ->call('choose', $plan->id)
-        ->set('amount', '1')
+        ->set('amount', '60000')
         ->assertSee('24.000 oz')
         ->set('acceptRisk', true)
         ->call('invest');
@@ -78,7 +78,7 @@ test('admins filter plans by category and create one for that category', functio
         ->set('name', 'Solana Max')
         ->set('category', 'solana')
         ->set('summary', 'Solana plan.')
-        ->set('minBtc', '0.01')
+        ->set('minUsdt', '100')
         ->call('save')
         ->assertHasNoErrors();
 

@@ -8,8 +8,7 @@ use App\Models\Announcement;
 use App\Models\Investment;
 use App\Models\LedgerEntry;
 use App\Models\Plan;
-use App\Services\MarketPrices;
-use App\Support\Btc;
+use App\Support\Usdt;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Attributes\Computed;
@@ -44,11 +43,11 @@ new #[Title('Dashboard')] class extends Component {
         $user = Auth::user();
 
         return [
-            'balance' => $user->balance_sats,
-            'invested' => (int) $this->activeInvestments->sum('amount_sats'),
-            'earned' => (int) $user->ledgerEntries()->where('type', LedgerType::Earning)->sum('amount_sats')
-                + (int) $this->activeInvestments->sum('earned_sats'),
-            'pending_withdrawals' => (int) $user->withdrawals()->where('status', RequestStatus::Pending)->sum('amount_sats'),
+            'balance' => $user->balance_micros,
+            'invested' => (int) $this->activeInvestments->sum('amount_micros'),
+            'earned' => (int) $user->ledgerEntries()->where('type', LedgerType::Earning)->sum('amount_micros')
+                + (int) $this->activeInvestments->sum(fn (Investment $investment): int => $investment->earnedSoFar()),
+            'pending_withdrawals' => (int) $user->withdrawals()->where('status', RequestStatus::Pending)->sum('amount_micros'),
         ];
     }
 
@@ -63,8 +62,8 @@ new #[Title('Dashboard')] class extends Component {
         return Auth::user()->ledgerEntries()->latest('id')->limit(30)->get()->reverse()->values()
             ->map(fn (LedgerEntry $entry): array => [
                 'label' => $entry->created_at->format('M j'),
-                'value' => $entry->balance_after_sats,
-                'text' => Btc::format($entry->balance_after_sats).' BTC',
+                'value' => $entry->balance_after_micros,
+                'text' => Usdt::format($entry->balance_after_micros).' USDT',
             ])->all();
     }
 
@@ -103,16 +102,10 @@ new #[Title('Dashboard')] class extends Component {
             ['label' => __('Turn on two-step login'), 'done' => $user->two_factor_confirmed_at !== null, 'url' => route('security.edit')],
         ];
     }
-
-    #[Computed]
-    public function btcPriceCents(): ?int
-    {
-        return app(MarketPrices::class)->cached()['btc_cents'];
-    }
 };
 ?>
 
-<div class="space-y-6">
+<div wire:poll.20s data-live-page class="space-y-6">
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Welcome back, :name', ['name' => Str::before(auth()->user()->name, ' ')]) }}</flux:heading>
@@ -165,17 +158,17 @@ new #[Title('Dashboard')] class extends Component {
     @endunless
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <x-stat-card :label="__('Available balance')" icon="wallet" :hint="$this->btcPriceCents ? '≈ '.Btc::usd(Btc::usdCents($this->totals['balance'], $this->btcPriceCents)) : null">
-            <x-btc :sats="$this->totals['balance']" />
+        <x-stat-card :label="__('Available balance')" icon="wallet" :hint="__('Paid out in USDT')">
+            <x-usdt :micros="$this->totals['balance']" />
         </x-stat-card>
         <x-stat-card :label="__('In active plans')" icon="chart-pie" :hint="trans_choice(':count active plan|:count active plans', $this->activeInvestments->count())">
-            <x-btc :sats="$this->totals['invested']" />
+            <x-usdt :micros="$this->totals['invested']" />
         </x-stat-card>
         <x-stat-card :label="__('Earnings')" icon="arrow-trending-up" :hint="__('Paid and accruing')">
-            <x-btc :sats="$this->totals['earned']" />
+            <x-usdt :micros="$this->totals['earned']" />
         </x-stat-card>
         <x-stat-card :label="__('Pending withdrawals')" icon="arrow-up-tray" :hint="__('Waiting for admin review')">
-            <x-btc :sats="$this->totals['pending_withdrawals']" />
+            <x-usdt :micros="$this->totals['pending_withdrawals']" />
         </x-stat-card>
     </div>
 
@@ -191,18 +184,18 @@ new #[Title('Dashboard')] class extends Component {
         <flux:card>
             <flux:heading>{{ __('Allocation') }}</flux:heading>
             @php
-                $segments = [['label' => __('Available'), 'value' => $this->totals['balance'], 'color' => '#4f6cb8', 'text' => Btc::format($this->totals['balance']).' BTC']];
+                $segments = [['label' => __('Available'), 'value' => $this->totals['balance'], 'color' => '#4f6cb8', 'text' => Usdt::format($this->totals['balance']).' USDT']];
                 foreach (PlanCategory::cases() as $category) {
-                    $inPlans = (int) $this->activeInvestments->filter(fn ($investment) => $investment->plan->category === $category)->sum('amount_sats');
+                    $inPlans = (int) $this->activeInvestments->filter(fn ($investment) => $investment->plan->category === $category)->sum('amount_micros');
                     if ($inPlans > 0 || in_array($category, [PlanCategory::Bitcoin, PlanCategory::Gold], true)) {
-                        $segments[] = ['label' => __($category->label()), 'value' => $inPlans, 'color' => $category->color(), 'text' => Btc::format($inPlans).' BTC'];
+                        $segments[] = ['label' => __($category->label()), 'value' => $inPlans, 'color' => $category->color(), 'text' => Usdt::format($inPlans).' USDT'];
                     }
                 }
             @endphp
             <x-chart.donut class="mt-6" :segments="$segments">
                 <x-slot name="center">
                     <span class="text-[11px] text-zinc-500">{{ __('Total') }}</span>
-                    <span class="text-sm font-semibold text-zinc-900 dark:text-white">{{ Btc::format($this->totals['balance'] + $this->totals['invested']) }}</span>
+                    <span class="text-sm font-semibold text-zinc-900 dark:text-white" title="{{ Usdt::format($this->totals['balance'] + $this->totals['invested']) }} USDT">{{ Usdt::compact($this->totals['balance'] + $this->totals['invested']) }}</span>
                 </x-slot>
             </x-chart.donut>
         </flux:card>
@@ -211,12 +204,14 @@ new #[Title('Dashboard')] class extends Component {
     @if ($this->plans->isNotEmpty())
         <div>
             <div class="flex flex-wrap items-center justify-between gap-2">
-                <flux:heading class="flex items-center gap-2"><flux:icon.calculator variant="mini" class="text-brand-600" /> {{ __('BTC plan calculator') }}</flux:heading>
-                <flux:text class="text-sm">{{ __('Your balance: :amount BTC', ['amount' => Btc::format($this->totals['balance'])]) }}</flux:text>
+                <flux:heading class="flex items-center gap-2"><flux:icon.calculator variant="mini" class="text-brand-600" /> {{ __('Plan calculator') }}</flux:heading>
+                <flux:text class="text-sm">{{ __('Your balance: :amount USDT', ['amount' => Usdt::format($this->totals['balance'])]) }}</flux:text>
             </div>
-            <x-returns-calculator class="mt-3" :plans="$this->plans" :btc-price-cents="$this->btcPriceCents" />
+            <x-returns-calculator class="mt-3" :plans="$this->plans" />
         </div>
     @endif
+
+    <x-coin-converter />
 
     <div class="grid gap-6 xl:grid-cols-2">
         <flux:card>
@@ -229,12 +224,12 @@ new #[Title('Dashboard')] class extends Component {
                     <div wire:key="inv-{{ $investment->id }}" class="rounded-lg border border-zinc-100 p-3 dark:border-white/10">
                         <div class="flex items-center justify-between gap-3 text-sm">
                             <span class="font-medium text-zinc-900 dark:text-white">{{ $investment->plan->name }}</span>
-                            <x-btc :sats="$investment->amount_sats" class="font-medium" />
+                            <x-usdt :micros="$investment->amount_micros" class="font-medium" />
                         </div>
                         <flux:progress class="mt-2" :value="$investment->progressPercent()" />
                         <div class="mt-1.5 flex justify-between text-xs text-zinc-500">
                             <span>{{ __('Ends :date', ['date' => $investment->ends_at->format('M j, Y')]) }}</span>
-                            <span>{{ __('Earned so far:') }} <x-btc :sats="$investment->earned_sats" /></span>
+                            <span>{{ __('Earned so far:') }} @php($earned = $investment->earnedSoFar())<x-usdt :micros="$earned" :decimals="$earned > 0 && $earned < 1_000_000 ? 4 : 2" class="font-medium text-green-700 dark:text-green-400" /></span>
                         </div>
                     </div>
                 @empty
@@ -252,10 +247,10 @@ new #[Title('Dashboard')] class extends Component {
                 @forelse ($this->recentEntries as $entry)
                     <li wire:key="entry-{{ $entry->id }}" class="flex items-center justify-between gap-3 py-2.5 text-sm">
                         <div class="min-w-0">
-                            <p class="truncate font-medium text-zinc-900 dark:text-white">{{ $entry->type->label() }}</p>
+                            <p class="truncate font-medium text-zinc-900 dark:text-white">{{ $entry->label() }}</p>
                             <p class="truncate text-xs text-zinc-500">{{ $entry->created_at->format('M j, Y g:i A') }}</p>
                         </div>
-                        <x-btc :sats="$entry->amount_sats" signed @class(['font-medium', 'text-green-600 dark:text-green-400' => $entry->amount_sats > 0, 'text-zinc-700 dark:text-zinc-300' => $entry->amount_sats < 0]) />
+                        <x-usdt :micros="$entry->amount_micros" signed @class(['font-medium', 'text-green-600 dark:text-green-400' => $entry->amount_micros > 0, 'text-zinc-700 dark:text-zinc-300' => $entry->amount_micros < 0]) />
                     </li>
                 @empty
                     <li class="py-2.5 text-sm text-zinc-500">{{ __('No activity yet.') }}</li>

@@ -62,6 +62,8 @@ function initCounters() {
 
 /** Live BTC and gold tickers: fill [data-price="btc|gold"] and [data-change="btc|gold"]. */
 const usd = new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 2 });
+/** Prices quoted in USDT, e.g. "77,196.00" for BTC/USDT. */
+const usdtNumber = new Intl.NumberFormat('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 let priceTimer = null;
 let lastPrices = {};
 
@@ -72,7 +74,7 @@ function renderPrices(data) {
 
         document.querySelectorAll(`[data-price="${asset}"]`).forEach((el) => {
             if (cents == null) return;
-            el.textContent = usd.format(cents / 100);
+            el.textContent = el.dataset.priceFormat === 'usdt' ? usdtNumber.format(cents / 100) : usd.format(cents / 100);
             if (lastPrices[asset] != null && lastPrices[asset] !== cents && !reducedMotion()) {
                 el.classList.remove('price-up', 'price-down');
                 void el.offsetWidth;
@@ -96,6 +98,9 @@ function renderPrices(data) {
     document.querySelectorAll('[data-price-updated]').forEach((el) => {
         if (data.updated_at) el.textContent = new Date(data.updated_at).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
     });
+
+    // Let calculators recalculate their coin amounts with the new prices.
+    document.dispatchEvent(new CustomEvent('prices:updated', { detail: { ...lastPrices } }));
 }
 
 async function refreshPrices(url) {
@@ -194,21 +199,47 @@ function initHeroCanvas() {
     draw();
 }
 
+/**
+ * Copy text to the clipboard. navigator.clipboard only exists on https:// and
+ * localhost, so plain http:// sites fall back to a hidden textarea + execCommand.
+ */
+async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(text);
+        return true;
+    }
+
+    const area = document.createElement('textarea');
+    area.value = text;
+    area.setAttribute('readonly', '');
+    area.style.cssText = 'position:fixed;top:0;left:0;opacity:0;pointer-events:none';
+    document.body.append(area);
+    area.select();
+    area.setSelectionRange(0, text.length);
+    const copied = document.execCommand('copy');
+    area.remove();
+    return copied;
+}
+
 /** Copy buttons anywhere on the page: <button data-copy="text">. One listener, so it also works inside Livewire updates. */
 document.addEventListener('click', async (event) => {
     const button = event.target.closest('[data-copy]');
     if (!button) return;
 
+    const label = button.querySelector('[data-copy-label]');
+    const original = label?.dataset.copyOriginal ?? label?.textContent;
+    if (label) label.dataset.copyOriginal = original;
+
+    let copied = false;
     try {
-        await navigator.clipboard.writeText(button.dataset.copy);
-        const label = button.querySelector('[data-copy-label]');
-        if (label) {
-            const original = label.textContent;
-            label.textContent = 'Copied';
-            setTimeout(() => (label.textContent = original), 1600);
-        }
+        copied = await copyText(button.dataset.copy);
     } catch {
-        // Clipboard blocked; the text is still visible to copy by hand.
+        copied = false;
+    }
+
+    if (label) {
+        label.textContent = copied ? 'Copied' : 'Press Ctrl+C to copy';
+        setTimeout(() => (label.textContent = original), 1600);
     }
 });
 
@@ -228,20 +259,53 @@ function boot() {
     initHeroCanvas();
     initHeader();
     initCalculators();
+    initConverters();
 }
 
-/** BTC text → satoshis (BigInt), or null. Mirrors App\Support\Btc::toSats. */
-function toSats(text) {
-    const match = /^(\d{1,8})(?:\.(\d{1,8}))?$/.exec(String(text).trim());
+/** Coin ⇄ USDT converters: <div data-converter data-prices='{"BTC":76890,...}'>. Display only. */
+function initConverters() {
+    document.querySelectorAll('[data-converter]:not([data-converter-ready])').forEach((root) => {
+        root.dataset.converterReady = '1';
+        const prices = JSON.parse(root.dataset.prices || '{}');
+        const coin = root.querySelector('[data-converter-coin]');
+        const coinAmount = root.querySelector('[data-converter-coin-amount]');
+        const usdtAmount = root.querySelector('[data-converter-usdt]');
+        const rate = root.querySelector('[data-converter-rate]');
+        const parse = (text) => {
+            const value = parseFloat(String(text).replace(/,/g, ''));
+            return Number.isFinite(value) && value >= 0 ? value : null;
+        };
+        const label = () => (coin.value === 'GOLD' ? 'oz of gold' : coin.value);
+
+        const fromCoin = () => {
+            const amount = parse(coinAmount.value);
+            usdtAmount.value = amount === null ? '' : (amount * prices[coin.value]).toFixed(2);
+            rate.textContent = `1 ${label()} = ${usdtNumber.format(prices[coin.value])} USDT`;
+        };
+        const fromUsdt = () => {
+            const amount = parse(usdtAmount.value);
+            coinAmount.value = amount === null ? '' : String(+(amount / prices[coin.value]).toFixed(8));
+        };
+
+        coinAmount.addEventListener('input', fromCoin);
+        usdtAmount.addEventListener('input', fromUsdt);
+        coin.addEventListener('change', fromCoin);
+        fromCoin();
+    });
+}
+
+/** USDT text → micros (BigInt), or null. Mirrors App\Support\Usdt::toMicros. */
+function toMicros(text) {
+    const match = /^(\d{1,9})(?:\.(\d{1,2}))?$/.exec(String(text).trim().replace(/,/g, ''));
     if (!match) return null;
-    return BigInt(match[1]) * 100000000n + BigInt((match[2] || '').padEnd(8, '0'));
+    return BigInt(match[1]) * 1000000n + BigInt((match[2] || '').padEnd(6, '0'));
 }
 
-/** Satoshis (BigInt) → BTC text with trailing zeros trimmed. */
-function formatBtc(sats) {
-    const whole = sats / 100000000n;
-    const fraction = (sats % 100000000n).toString().padStart(8, '0').replace(/0+$/, '');
-    return `${whole.toLocaleString('en-US')}${fraction ? '.' + fraction : ''} BTC`;
+/** Micros (BigInt) → USDT text with 2 decimals, rounded down. Mirrors App\Support\Usdt::format. */
+function formatUsdt(micros) {
+    const whole = micros / 1000000n;
+    const fraction = (micros % 1000000n).toString().padStart(6, '0').slice(0, 2);
+    return `${whole.toLocaleString('en-US')}.${fraction} USDT`;
 }
 
 /** Returns calculators: <div data-calculator data-plans='[...]'>. */
@@ -249,47 +313,76 @@ function initCalculators() {
     document.querySelectorAll('[data-calculator]:not([data-calc-ready])').forEach((root) => {
         root.dataset.calcReady = '1';
         const plans = JSON.parse(root.dataset.plans || '[]');
-        const btcPriceCents = parseInt(root.dataset.btcPrice || '0', 10);
-        const goldPriceCents = parseInt(root.dataset.goldPrice || '0', 10);
+        const livePrices = JSON.parse(root.dataset.livePrices || '{}');
+        const goldPriceCents = () => livePrices.gold || parseInt(root.dataset.goldPrice || '0', 10);
+        /**
+         * "≈ 0.01340000 BTC" for a USDT amount at the live coin price, "≈ 0.0261 oz (0.81 g) of gold"
+         * for gold plans, or '' for USDT and Mix plans.
+         */
+        const inCoin = (plan, micros) => {
+            if (plan.mix) {
+                // A mix has no single coin: show it in each coin the user can withdraw in.
+                return [['btc', 'BTC', 6], ['eth', 'ETH', 5], ['sol', 'SOL', 4]]
+                    .filter(([key]) => livePrices[key])
+                    .map(([key, ticker, decimals]) => `${(Number(micros) / 10000 / livePrices[key]).toFixed(decimals)} ${ticker}`)
+                    .join(' · ')
+                    .replace(/^(?=.)/, '≈ ');
+            }
+            const cents = plan.priceKey ? livePrices[plan.priceKey] : null;
+            if (!cents) return '';
+            const units = Number(micros) / 10000 / cents;
+            if (!plan.gold) return `≈ ${units.toFixed(8)} ${plan.ticker}`;
+            const grams = units * 31.1034768;
+            return `≈ ${units.toFixed(4)} oz (${grams.toFixed(grams < 1 ? 4 : 2)} g) of gold`;
+        };
         const select = root.querySelector('[data-calc-plan]');
         const input = root.querySelector('[data-calc-amount]');
         const out = (key, text, sub = '') => {
             root.querySelector(`[data-calc-${key}]`).textContent = text;
             root.querySelector(`[data-calc-${key}-sub]`).textContent = sub;
         };
-        const usdFor = (sats) => (btcPriceCents ? '≈ ' + usd.format(Number((sats * BigInt(btcPriceCents)) / 100000000n) / 100) : '');
 
         const update = () => {
             const plan = plans.find((p) => String(p.id) === select.value) || plans[0];
-            const sats = toSats(input.value);
-            root.querySelector('[data-calc-limits]').textContent = `Min ${plan.min} BTC${plan.max ? ` · Max ${plan.max} BTC` : ''}`;
+            const micros = toMicros(input.value);
+            root.querySelector('[data-calc-limits]').textContent = `Min ${plan.min} USDT${plan.max ? ` · Max ${plan.max} USDT` : ''}`;
             out('rate', `${plan.rate}%`, `${plan.daily}% a day for ${plan.days} days`);
 
-            if (sats === null || sats <= 0n) {
+            if (micros === null || micros <= 0n) {
                 ['daily', 'profit', 'total'].forEach((key) => out(key, '—'));
-                root.querySelector('[data-calc-summary]').textContent = 'Enter an amount in BTC, e.g. 0.05';
+                root.querySelector('[data-calc-summary]').textContent = 'Enter an amount in USDT, e.g. 1000';
                 return;
             }
 
-            const profit = (sats * BigInt(plan.bps)) / 10000n;
+            const profit = (micros * BigInt(plan.bps)) / 10000n;
             const daily = profit / BigInt(plan.days);
-            const total = sats + profit;
+            const total = micros + profit;
             const ends = new Date(Date.now() + plan.days * 86400000).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            const outside = sats < BigInt(plan.minSats) || (plan.maxSats && sats > BigInt(plan.maxSats));
+            const outside = micros < BigInt(plan.minMicros) || (plan.maxMicros && micros > BigInt(plan.maxMicros));
 
-            out('daily', formatBtc(daily), usdFor(daily));
-            out('profit', '+' + formatBtc(profit), usdFor(profit));
-            out('total', formatBtc(total), usdFor(total));
+            out('daily', formatUsdt(daily), inCoin(plan, daily));
+            out('profit', '+' + formatUsdt(profit), inCoin(plan, profit));
+            out('total', formatUsdt(total), inCoin(plan, total));
             root.querySelector('[data-calc-summary]').textContent = outside
                 ? `This amount is outside the ${plan.name} limits.`
-                : `Invest ${formatBtc(sats)} in ${plan.name} today and receive ${formatBtc(total)} on ${ends} (after ${plan.days} days).`
-                    + (plan.gold && btcPriceCents && goldPriceCents
-                        ? ` At today's prices that is about ${(Number((total * BigInt(btcPriceCents)) / 100000000n) / goldPriceCents).toFixed(3)} oz of gold.`
+                : `Invest ${formatUsdt(micros)} in ${plan.name} today and receive ${formatUsdt(total)} on ${ends} (after ${plan.days} days).`
+                    + (! plan.gold && inCoin(plan, total)
+                        ? (plan.mix
+                            ? ` Withdrawn in one coin, that is about ${inCoin(plan, total).slice(2).replaceAll(' · ', ', or ')} at live prices.`
+                            : ` If you withdraw in ${plan.ticker}, that is ${inCoin(plan, total).slice(2)} at the live price.`)
+                        : '')
+                    + (plan.gold && goldPriceCents()
+                        ? ` At today's prices that is about ${(Number(total / 10000n) / goldPriceCents()).toFixed(3)} oz of gold.`
                         : '');
         };
 
         select.addEventListener('change', update);
         input.addEventListener('input', update);
+        document.addEventListener('prices:updated', (event) => {
+            if (!root.isConnected) return;
+            Object.assign(livePrices, event.detail);
+            update();
+        });
         update();
     });
 }

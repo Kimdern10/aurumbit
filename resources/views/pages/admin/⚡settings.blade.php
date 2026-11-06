@@ -1,8 +1,7 @@
 <?php
 
 use App\Models\Setting;
-use App\Rules\BitcoinAddress;
-use App\Support\Btc;
+use App\Support\Usdt;
 use Flux\Flux;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -17,10 +16,6 @@ new #[Title('Site settings')] class extends Component {
     public string $seoDescription = '';
 
     public string $companyDetails = '';
-
-    public string $depositAddress = '';
-
-    public string $explorerTxUrl = '';
 
     public string $minDeposit = '';
 
@@ -37,28 +32,22 @@ new #[Title('Site settings')] class extends Component {
         $this->supportEmail = Setting::get('support_email');
         $this->seoDescription = Setting::get('seo_description');
         $this->companyDetails = Setting::get('company_details');
-        $this->depositAddress = Setting::get('deposit_address');
-        $this->explorerTxUrl = Setting::get('explorer_tx_url');
-        $this->minDeposit = Btc::format(Setting::integer('min_deposit_sats'));
-        $this->minWithdrawal = Btc::format(Setting::integer('min_withdrawal_sats'));
+        $this->minDeposit = str_replace(',', '', Usdt::format(Setting::integer('min_deposit_micros')));
+        $this->minWithdrawal = str_replace(',', '', Usdt::format(Setting::integer('min_withdrawal_micros')));
         $this->withdrawalRequiresKyc = Setting::enabled('withdrawal_requires_kyc');
         $this->referralBonusPercent = rtrim(rtrim(number_format(Setting::integer('referral_bonus_bps') / 100, 2, '.', ''), '0'), '.');
     }
 
     public function save(): void
     {
-        $this->depositAddress = trim($this->depositAddress);
-
         $validated = $this->validate([
             'siteName' => ['required', 'string', 'max:60'],
             'tagline' => ['required', 'string', 'max:160'],
             'supportEmail' => ['required', 'email', 'max:120'],
             'seoDescription' => ['required', 'string', 'max:300'],
             'companyDetails' => ['nullable', 'string', 'max:500'],
-            'depositAddress' => ['nullable', 'string', 'max:100', new BitcoinAddress],
-            'explorerTxUrl' => ['required', 'url:https', 'max:200'],
-            'minDeposit' => ['required', 'regex:'.Btc::INPUT_PATTERN],
-            'minWithdrawal' => ['required', 'regex:'.Btc::INPUT_PATTERN],
+            'minDeposit' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
+            'minWithdrawal' => ['required', 'regex:'.Usdt::INPUT_PATTERN],
             'withdrawalRequiresKyc' => ['boolean'],
             'referralBonusPercent' => ['required', 'regex:/^\d{1,2}(\.\d{1,2})?$/'],
         ]);
@@ -71,10 +60,8 @@ new #[Title('Site settings')] class extends Component {
             'support_email' => $validated['supportEmail'],
             'seo_description' => $validated['seoDescription'],
             'company_details' => $validated['companyDetails'],
-            'deposit_address' => $validated['depositAddress'],
-            'explorer_tx_url' => $validated['explorerTxUrl'],
-            'min_deposit_sats' => Btc::toSats($validated['minDeposit']),
-            'min_withdrawal_sats' => Btc::toSats($validated['minWithdrawal']),
+            'min_deposit_micros' => Usdt::toMicros($validated['minDeposit']),
+            'min_withdrawal_micros' => Usdt::toMicros($validated['minWithdrawal']),
             'withdrawal_requires_kyc' => $validated['withdrawalRequiresKyc'],
             'referral_bonus_bps' => (int) $whole * 100 + (int) str_pad($fraction, 2, '0'),
         ]);
@@ -103,13 +90,13 @@ new #[Title('Site settings')] class extends Component {
         </flux:card>
 
         <flux:card class="space-y-4">
-            <flux:heading>{{ __('Wallet') }}</flux:heading>
-            <flux:input wire:model="depositAddress" :label="__('Company BTC deposit address')" class="font-mono"
-                :description="__('Customers send BTC here. Leave empty to close deposits. Double-check it: coins sent to a wrong address are lost.')" />
-            <flux:input wire:model="explorerTxUrl" :label="__('Blockchain explorer link for transactions')" :description="__('Used for the Check on blockchain links, e.g. https://mempool.space/tx/')" />
+            <div class="flex flex-wrap items-center justify-between gap-2">
+                <flux:heading>{{ __('Balances (USDT)') }}</flux:heading>
+                <flux:button size="sm" icon="wallet" :href="route('admin.wallets')" wire:navigate>{{ __('Manage deposit wallets') }}</flux:button>
+            </div>
             <div class="grid gap-4 sm:grid-cols-3">
-                <flux:input wire:model="minDeposit" :label="__('Minimum deposit (BTC)')" inputmode="decimal" />
-                <flux:input wire:model="minWithdrawal" :label="__('Minimum withdrawal (BTC)')" inputmode="decimal" />
+                <flux:input wire:model="minDeposit" :label="__('Minimum deposit (USDT)')" inputmode="decimal" :description="__('Checked at today\'s price for coins we have a price for.')" />
+                <flux:input wire:model="minWithdrawal" :label="__('Minimum withdrawal (USDT)')" inputmode="decimal" />
                 <flux:input wire:model="referralBonusPercent" :label="__('Referral bonus (%)')" inputmode="decimal" />
             </div>
             <flux:switch wire:model="withdrawalRequiresKyc" :label="__('Require verified identity before withdrawals')" />

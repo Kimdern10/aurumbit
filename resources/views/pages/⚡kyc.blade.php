@@ -38,7 +38,7 @@ new #[Title('Verification')] class extends Component {
     #[Computed]
     public function canSubmit(): bool
     {
-        return $this->latest === null || $this->latest->status === KycStatus::Rejected;
+        return $this->latest === null || in_array($this->latest->status, [KycStatus::Rejected, KycStatus::Revoked], true);
     }
 
     public function save(): void
@@ -79,14 +79,16 @@ new #[Title('Verification')] class extends Component {
 
     @if ($this->latest)
         <flux:card class="flex items-start gap-4">
-            <flux:icon :name="match ($this->latest->status) { KycStatus::Approved => 'check-badge', KycStatus::Rejected => 'x-circle', default => 'clock' }"
-                @class(['size-8 shrink-0', 'text-green-600' => $this->latest->status === KycStatus::Approved, 'text-red-600' => $this->latest->status === KycStatus::Rejected, 'text-amber-500' => $this->latest->status === KycStatus::Pending]) />
+            <flux:icon :name="match ($this->latest->status) { KycStatus::Approved => 'check-badge', KycStatus::Rejected, KycStatus::Revoked => 'x-circle', default => 'clock' }"
+                @class(['size-8 shrink-0', 'text-green-600' => $this->latest->status === KycStatus::Approved, 'text-red-600' => in_array($this->latest->status, [KycStatus::Rejected, KycStatus::Revoked], true), 'text-amber-500' => $this->latest->status === KycStatus::Pending]) />
             <div>
                 <flux:heading>{{ $this->latest->status->label() }}</flux:heading>
                 <flux:text class="mt-1 text-sm">
                     {{ __(':type sent on :date.', ['type' => $this->latest->documentTypeLabel(), 'date' => $this->latest->created_at->format('M j, Y')]) }}
                     @if ($this->latest->status === KycStatus::Pending)
                         {{ __('An admin will review it soon.') }}
+                    @elseif ($this->latest->status === KycStatus::Revoked)
+                        {{ __('Your verification was cancelled by our team. Please send new documents below.') }}
                     @elseif ($this->latest->status === KycStatus::Rejected)
                         {{ __('Please send new documents below.') }}
                     @endif

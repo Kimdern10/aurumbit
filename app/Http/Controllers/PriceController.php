@@ -8,7 +8,7 @@ use Illuminate\Http\JsonResponse;
 class PriceController extends Controller
 {
     /**
-     * Current BTC and gold prices for the tickers, refreshed by the browser.
+     * Current BTC, gold, Ethereum and Solana prices for the tickers, refreshed by the browser.
      */
     public function __invoke(MarketPrices $prices): JsonResponse
     {

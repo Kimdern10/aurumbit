@@ -1,14 +1,15 @@
 @php
     use App\Enums\PlanCategory;
     use App\Support\Btc;
+    use App\Support\Usdt;
 
     $faqs = [
-        ['q' => 'What can I invest in?', 'a' => 'Bitcoin, gold, Ethereum, Solana and Crypto Mix plans. Every plan is funded from your BTC balance, and you can see the rate, term and exact earnings before you invest.'],
+        ['q' => 'What can I invest in?', 'a' => 'Bitcoin, gold, Ethereum, Solana and Crypto Mix plans. Every plan is funded from your USDT balance, and you can see the rate, term and exact earnings before you invest.'],
         ['q' => 'How much will I earn?', 'a' => 'Each plan has a rate for its full term. Your earnings build up every day and are paid with your capital at the end of the term. Use the calculator to see the exact figures for any plan and amount.'],
-        ['q' => 'How do I deposit?', 'a' => 'Send Bitcoin to the deposit address shown in your dashboard, then enter the amount and the transaction ID. Your balance is credited once the transaction is confirmed on the blockchain.'],
-        ['q' => 'How do withdrawals work?', 'a' => 'Request a withdrawal to your own Bitcoin address. We check the address, then send your BTC and show you the transaction ID so you can follow the payment on the blockchain.'],
+        ['q' => 'How do I deposit?', 'a' => 'Send USDT, Bitcoin or another coin we accept to the matching wallet address shown in your dashboard, then enter the amount and the transaction ID. Once the transaction is confirmed on the blockchain, its value is added to your balance in USDT.'],
+        ['q' => 'How do withdrawals work?', 'a' => 'Your balance is kept in USDT. When you withdraw, choose to be paid in USDT (TRC20 or ERC20), BTC, ETH or SOL. Coins are converted at the live price when you ask. We check the address, then send the payment and show you the transaction ID so you can follow it on the blockchain.'],
         ['q' => 'Why do you ask for identity documents?', 'a' => 'Identity checks keep accounts safe and help prevent fraud. Your documents are stored privately and only seen by our verification team.'],
-        ['q' => 'How are gold plans priced?', 'a' => 'Gold plans are funded in BTC. When you start a plan, we show how much gold it is worth at that moment using the live PAX Gold price (one token is backed by one troy ounce of gold).'],
+        ['q' => 'How are gold plans priced?', 'a' => 'Gold plans are funded in USDT. When you start a plan, we show how much gold it is worth at that moment using the live PAX Gold price (one token is backed by one troy ounce of gold).'],
     ];
 
     $assets = [
@@ -18,13 +19,13 @@
         'gold' => ['Gold', 'PAXG · 1 oz', 'Au', '#c9a227'],
     ];
 
-    $icons = [
-        'bitcoin' => 'currency-dollar',
-        'gold' => 'cube',
-        'ethereum' => 'bolt',
-        'solana' => 'sparkles',
-        'crypto_index' => 'chart-pie',
-    ];
+    // Signed-in visitors skip sign-up: customers go to the plans, admins to their panel.
+    $user = auth()->user();
+    $startUrl = match (true) {
+        $user === null => route('register'),
+        $user->is_admin => route('admin.dashboard'),
+        default => route('invest'),
+    };
 @endphp
 
 <x-layouts::site>
@@ -50,8 +51,8 @@
                 </p>
 
                 <div data-reveal style="--reveal-delay: 240ms" class="mt-9 flex flex-wrap gap-3">
-                    <a href="{{ route('register') }}" class="inline-flex h-12 items-center gap-2 rounded-full bg-brand-600 px-7 text-base font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700">
-                        {{ __('Get started') }} <flux:icon.arrow-right variant="mini" />
+                    <a href="{{ $startUrl }}" wire:navigate class="inline-flex h-12 items-center gap-2 rounded-full bg-brand-600 px-7 text-base font-semibold text-white shadow-lg shadow-brand-600/25 transition hover:bg-brand-700">
+                        {{ $user ? ($user->is_admin ? __('Open admin panel') : __('Choose a plan')) : __('Get started') }} <flux:icon.arrow-right variant="mini" />
                     </a>
                     <a href="#plans" class="inline-flex h-12 items-center rounded-full border border-ink-200 bg-white px-7 text-base font-semibold text-ink-900 transition hover:border-ink-300 dark:border-white/15 dark:bg-white/5 dark:text-white">{{ __('View plans') }}</a>
                 </div>
@@ -91,7 +92,7 @@
                             </li>
                         @endforeach
                     </ul>
-                    <a href="{{ route('register') }}" class="mt-4 flex h-11 items-center justify-center rounded-xl bg-ink-950 text-sm font-semibold text-white transition hover:bg-ink-800 dark:bg-white dark:text-ink-950">{{ __('Start investing') }}</a>
+                    <a href="{{ $startUrl }}" wire:navigate class="mt-4 flex h-11 items-center justify-center rounded-xl bg-ink-950 text-sm font-semibold text-white transition hover:bg-ink-800 dark:bg-white dark:text-ink-950">{{ $user?->is_admin ? __('Open admin panel') : __('Start investing') }}</a>
                 </div>
             </div>
         </div>
@@ -119,11 +120,11 @@
         <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
             <div data-reveal class="max-w-2xl">
                 <p class="text-sm font-semibold text-brand-600 dark:text-brand-400">{{ __('Ways to invest') }}</p>
-                <h2 class="mt-2 font-display text-4xl font-extrabold text-ink-950 sm:text-5xl dark:text-white">{{ __('One account. Five ways to grow.') }}</h2>
-                <p class="mt-4 text-lg text-ink-500 dark:text-ink-300">{{ __('Fund your account in Bitcoin once, then spread it across the plans that suit you.') }}</p>
+                <h2 class="mt-2 font-display text-4xl font-extrabold text-ink-950 sm:text-5xl dark:text-white">{{ __('One account. Six ways to grow.') }}</h2>
+                <p class="mt-4 text-lg text-ink-500 dark:text-ink-300">{{ __('Fund your account once in USDT, Bitcoin or another coin, then spread it across the plans that suit you.') }}</p>
             </div>
 
-            <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-5">
+            <div class="mt-14 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
                 @foreach (PlanCategory::cases() as $category)
                     @php
                         $group = $plans->where('category', $category);
@@ -131,9 +132,10 @@
                     @endphp
                     <a href="#plans" data-reveal style="--reveal-delay: {{ $loop->index * 70 }}ms" class="group flex flex-col rounded-3xl border border-ink-100 bg-white p-6 transition hover:-translate-y-1 hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5 dark:border-white/10 dark:bg-ink-900">
                         <span class="flex size-12 items-center justify-center rounded-2xl" style="background: {{ $category->color() }}1a; color: {{ $category->color() }}">
-                            <flux:icon :name="$icons[$category->value]" />
+                            <flux:icon :name="$category->icon()" />
                         </span>
                         <h3 class="mt-5 font-semibold text-ink-950 dark:text-white">{{ __($category->label()) }}</h3>
+                        <x-coin-price :category="$category" class="mt-1" />
                         <p class="mt-2 flex-1 text-sm leading-relaxed text-ink-500 dark:text-ink-400">{{ __($category->description()) }}</p>
                         <p class="mt-5 text-sm font-semibold text-brand-600 dark:text-brand-400">
                             @if ($best)
@@ -157,7 +159,7 @@
                     <h2 class="mt-2 font-display text-4xl font-extrabold text-ink-950 sm:text-5xl dark:text-white">{{ __('How much will I earn?') }}</h2>
                     <p class="mt-4 text-lg text-ink-500 dark:text-ink-300">{{ __('Pick a plan and an amount. See what you earn every day, your total profit and the exact date you get paid.') }}</p>
                     <ul class="mt-6 space-y-3 text-ink-600 dark:text-ink-300">
-                        @foreach (['Earnings added every day', 'Capital and profit paid at the end of the term', 'Withdraw to your own Bitcoin wallet'] as $point)
+                        @foreach (['Earnings added every day', 'Capital and profit paid at the end of the term', 'Withdraw in USDT, BTC, ETH or SOL'] as $point)
                             <li class="flex items-center gap-3"><flux:icon.check-circle class="size-5 text-brand-600 dark:text-brand-400" /> {{ __($point) }}</li>
                         @endforeach
                     </ul>
@@ -192,6 +194,7 @@
                         @foreach ($group as $plan)
                             <article data-reveal style="--reveal-delay: {{ $loop->index * 80 }}ms" class="flex flex-col rounded-3xl border border-ink-100 bg-white p-7 transition hover:border-brand-200 hover:shadow-xl hover:shadow-brand-900/5 dark:border-white/10 dark:bg-ink-900">
                                 <h4 class="text-lg font-bold text-ink-950 dark:text-white">{{ $plan->name }}</h4>
+                                <x-coin-price :category="$plan->category" class="mt-1" />
                                 <p class="mt-1 text-sm leading-relaxed text-ink-500 dark:text-ink-400">{{ $plan->summary }}</p>
 
                                 <p class="mt-6 flex items-baseline gap-2">
@@ -201,13 +204,13 @@
                                 <p class="text-sm text-brand-600 dark:text-brand-400">{{ __(':rate% a day', ['rate' => $plan->dailyPercent()]) }}</p>
 
                                 <dl class="mt-6 space-y-2.5 border-t border-ink-100 pt-5 text-sm dark:border-white/10">
-                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __('Minimum') }}</dt><dd class="font-semibold text-ink-950 dark:text-white"><x-btc :sats="$plan->min_sats" /></dd></div>
-                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __('Maximum') }}</dt><dd class="font-semibold text-ink-950 dark:text-white">@if ($plan->max_sats)<x-btc :sats="$plan->max_sats" />@else{{ __('No limit') }}@endif</dd></div>
-                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __(':amount BTC returns', ['amount' => Btc::format($plan->min_sats)]) }}</dt><dd class="font-semibold text-green-600 dark:text-green-400"><x-btc :sats="$plan->min_sats + $plan->profitFor($plan->min_sats)" /></dd></div>
+                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __('Minimum') }}</dt><dd class="font-semibold text-ink-950 dark:text-white"><x-usdt :micros="$plan->min_micros" /></dd></div>
+                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __('Maximum') }}</dt><dd class="font-semibold text-ink-950 dark:text-white">@if ($plan->max_micros)<x-usdt :micros="$plan->max_micros" />@else{{ __('No limit') }}@endif</dd></div>
+                                    <div class="flex justify-between"><dt class="text-ink-500">{{ __(':amount USDT returns', ['amount' => Usdt::format($plan->min_micros, 0)]) }}</dt><dd class="font-semibold text-green-600 dark:text-green-400"><x-usdt :micros="$plan->min_micros + $plan->profitFor($plan->min_micros)" /></dd></div>
                                 </dl>
 
                                 <div class="mt-auto pt-7">
-                                    <a href="{{ auth()->check() ? route('invest') : route('register') }}" class="flex h-11 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white transition hover:bg-brand-700">{{ __('Invest now') }}</a>
+                                    <a href="{{ $startUrl }}" wire:navigate class="flex h-11 items-center justify-center rounded-full bg-brand-600 text-sm font-semibold text-white transition hover:bg-brand-700">{{ __('Invest now') }}</a>
                                 </div>
                             </article>
                         @endforeach
@@ -232,9 +235,9 @@
             <ol class="mt-16 grid gap-6 md:grid-cols-2 lg:grid-cols-4">
                 @foreach ([
                     ['icon' => 'user-plus', 'title' => 'Create your account', 'text' => 'Sign up in a minute, then verify your identity.'],
-                    ['icon' => 'arrow-down-tray', 'title' => 'Fund with Bitcoin', 'text' => 'Send BTC to your deposit address and enter the transaction ID.'],
+                    ['icon' => 'arrow-down-tray', 'title' => 'Fund your account', 'text' => 'Send USDT, Bitcoin or another accepted coin and enter the transaction ID. It is credited in USDT.'],
                     ['icon' => 'chart-bar', 'title' => 'Choose a plan', 'text' => 'Pick a Bitcoin, gold or crypto plan and watch your earnings grow daily.'],
-                    ['icon' => 'arrow-up-tray', 'title' => 'Withdraw anytime', 'text' => 'Send your balance to your own Bitcoin wallet when a plan ends.'],
+                    ['icon' => 'arrow-up-tray', 'title' => 'Withdraw your way', 'text' => 'When a plan ends, withdraw in USDT, BTC, ETH or SOL to your own wallet.'],
                 ] as $step)
                     <li data-reveal style="--reveal-delay: {{ $loop->index * 90 }}ms" class="relative rounded-3xl bg-white p-7 ring-1 ring-ink-100 dark:bg-ink-900 dark:ring-white/10">
                         <span class="text-sm font-bold text-brand-600 dark:text-brand-400">{{ __('Step :n', ['n' => $loop->iteration]) }}</span>
@@ -300,7 +303,7 @@
                 <div class="pointer-events-none absolute -top-24 -right-24 size-80 rounded-full bg-cyan-400/30 blur-3xl" aria-hidden="true"></div>
                 <h2 class="relative font-display text-4xl font-extrabold sm:text-5xl">{{ __('Start growing your crypto today') }}</h2>
                 <p class="relative mx-auto mt-4 max-w-xl text-lg text-brand-100">{{ __('Open your free account in minutes and pick the plan that fits you.') }}</p>
-                <a href="{{ route('register') }}" class="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-white px-8 font-semibold text-brand-700 transition hover:bg-brand-50">{{ __('Create free account') }} <flux:icon.arrow-right variant="mini" /></a>
+                <a href="{{ $startUrl }}" wire:navigate class="relative mt-8 inline-flex h-12 items-center gap-2 rounded-full bg-white px-8 font-semibold text-brand-700 transition hover:bg-brand-50">{{ $user ? __('Go to your account') : __('Create free account') }} <flux:icon.arrow-right variant="mini" /></a>
             </div>
         </div>
     </section>

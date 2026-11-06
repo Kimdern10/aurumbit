@@ -69,10 +69,10 @@ class UserFactory extends Factory
     }
 
     /**
-     * Start the user with a (simulated) balance in satoshis.
+     * Start the user with a (simulated) balance in micro-USDT.
      */
-    public function withBalance(int $sats): static
+    public function withBalance(int $micros): static
     {
-        return $this->state(fn (array $attributes) => ['balance_sats' => $sats]);
+        return $this->state(fn (array $attributes) => ['balance_micros' => $micros]);
     }
 }

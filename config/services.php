@@ -35,4 +35,23 @@ return [
         ],
     ],
 
+    /*
+     * Optional fixed BTC price in US dollars (e.g. 76728.00) for the one-time
+     * BTC → USDT balance conversion. When empty, the live price is used.
+     */
+    'market_prices' => [
+        'btc_usd_conversion_price' => env('BTC_USD_CONVERSION_PRICE'),
+    ],
+
+    /*
+     * A read-only Bybit API key, used to show the live balance of the company
+     * Bybit account and check deposits against Bybit's deposit history.
+     * Never give this key trade, transfer or withdrawal permission.
+     */
+    'bybit' => [
+        'key' => env('BYBIT_API_KEY'),
+        'secret' => env('BYBIT_API_SECRET'),
+        'base_url' => env('BYBIT_API_URL', 'https://api.bybit.com'),
+    ],
+
 ];

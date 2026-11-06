@@ -18,6 +18,29 @@ class AuthenticationTest extends TestCase
         $response->assertOk();
     }
 
+    public function test_login_and_register_screens_use_the_site_styling(): void
+    {
+        foreach (['login' => 'Welcome back', 'register' => 'Get started'] as $routeName => $eyebrow) {
+            $this->get(route($routeName))
+                ->assertOk()
+                ->assertSee(__($eyebrow))
+                ->assertSee(__('Secured with end-to-end encryption'))
+                ->assertDontSee('<html lang="en" class="dark">', false)
+                ->assertSee('data-prices-url="'.route('prices').'"', false)
+                ->assertSee('data-price="btc"', false)
+                ->assertSee(__('fixed-term plans.'))
+                ->assertSee(__('Back to home'));
+        }
+    }
+
+    public function test_each_logo_on_the_login_screen_has_its_own_gradient(): void
+    {
+        preg_match_all('/<linearGradient id="(hashvale-logo-[^"]+)"/', $this->get(route('login'))->getContent(), $matches);
+
+        $this->assertCount(2, $matches[1]);
+        $this->assertCount(2, array_unique($matches[1]));
+    }
+
     public function test_users_can_authenticate_using_the_login_screen(): void
     {
         $user = User::factory()->create();

@@ -21,8 +21,8 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property string $slug
  * @property PlanCategory $category
  * @property string $summary
- * @property int $min_sats
- * @property int|null $max_sats
+ * @property int $min_micros
+ * @property int|null $max_micros
  * @property int $duration_days
  * @property int $target_return_bps
  * @property string $risk_level
@@ -31,7 +31,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonInterface|null $created_at
  * @property CarbonInterface|null $updated_at
  */
-#[Fillable(['name', 'slug', 'category', 'summary', 'min_sats', 'max_sats', 'duration_days', 'target_return_bps', 'risk_level', 'is_active', 'sort_order'])]
+#[Fillable(['name', 'slug', 'category', 'summary', 'min_micros', 'max_micros', 'duration_days', 'target_return_bps', 'risk_level', 'is_active', 'sort_order'])]
 class Plan extends Model
 {
     /** @use HasFactory<PlanFactory> */
@@ -46,8 +46,8 @@ class Plan extends Model
     {
         return [
             'category' => PlanCategory::class,
-            'min_sats' => 'integer',
-            'max_sats' => 'integer',
+            'min_micros' => 'integer',
+            'max_micros' => 'integer',
             'duration_days' => 'integer',
             'target_return_bps' => 'integer',
             'is_active' => 'boolean',
@@ -91,11 +91,11 @@ class Plan extends Model
     }
 
     /**
-     * Profit on an amount at the end of the term, in whole satoshis (rounded down).
+     * Profit on an amount at the end of the term, in whole micro-USDT (rounded down).
      */
-    public function profitFor(int $sats): int
+    public function profitFor(int $micros): int
     {
-        return intdiv($sats * $this->target_return_bps, 10000);
+        return intdiv($micros * $this->target_return_bps, 10000);
     }
 
     public function riskLabel(): string

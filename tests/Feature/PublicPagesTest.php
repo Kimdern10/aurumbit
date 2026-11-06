@@ -64,7 +64,7 @@ test('the last good prices are kept when the API fails', function () {
     cache()->forget('market-prices');
 
     expect($prices->current()['btc_cents'])->toBe(6_000_000)
-        ->and($prices->goldMilligrams(100_000_000))->toBe(746_483);
+        ->and($prices->goldMilligrams(60_000_000_000))->toBe(746_483);
 });
 
 test('registration needs the terms box and records who invited the user', function () {
@@ -90,5 +90,37 @@ test('registration needs the terms box and records who invited the user', functi
     expect($user->referred_by_id)->toBe($referrer->id)
         ->and($user->referral_code)->toHaveLength(8)
         ->and($user->is_admin)->toBeFalse()
-        ->and($user->balance_sats)->toBe(0);
+        ->and($user->balance_micros)->toBe(0);
+});
+
+test('signed-in customers and admins can view the website, with links back to their area', function () {
+    $customer = User::factory()->create();
+    $admin = User::factory()->admin()->create();
+
+    $this->actingAs($customer)->get(route('home'))
+        ->assertOk()
+        ->assertSee('Choose a plan')
+        ->assertSee('href="'.route('invest').'"', false)
+        ->assertSee('href="'.route('dashboard').'"', false)
+        ->assertDontSee('Create free account');
+
+    $this->actingAs($admin)->get(route('home'))
+        ->assertOk()
+        ->assertSee('Admin panel')
+        ->assertSee('href="'.route('admin.dashboard').'"', false)
+        ->assertDontSee('href="'.route('register').'"', false);
+
+    foreach (['terms' => 'legal.terms', 'privacy' => 'legal.privacy', 'risk' => 'legal.risk'] as $route) {
+        $this->actingAs($admin)->get(route($route))->assertOk();
+    }
+});
+
+test('the dashboard and admin panel link to the website', function () {
+    $this->actingAs(User::factory()->create())->get(route('dashboard'))
+        ->assertSee('View website')
+        ->assertSee('data-view-website', false);
+
+    $this->actingAs(User::factory()->admin()->create())->get(route('admin.dashboard'))
+        ->assertSee('View website')
+        ->assertSee('data-view-website', false);
 });

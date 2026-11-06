@@ -81,8 +81,8 @@ new #[Title('Audit log')] class extends Component {
                             <p class="font-medium">{{ $entry->type->label() }}</p>
                             <p class="max-w-72 truncate text-xs text-zinc-500">{{ $entry->description }}</p>
                         </flux:table.cell>
-                        <flux:table.cell align="end"><x-btc :sats="$entry->amount_sats" signed /></flux:table.cell>
-                        <flux:table.cell align="end"><x-btc :sats="$entry->balance_after_sats" /></flux:table.cell>
+                        <flux:table.cell align="end"><x-usdt :micros="$entry->amount_micros" signed /></flux:table.cell>
+                        <flux:table.cell align="end"><x-usdt :micros="$entry->balance_after_micros" /></flux:table.cell>
                         <flux:table.cell class="text-xs">{{ $entry->actor?->name ?? __('User / system') }}</flux:table.cell>
                     </flux:table.row>
                 @empty

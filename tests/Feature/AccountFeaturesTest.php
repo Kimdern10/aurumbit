@@ -9,13 +9,13 @@ use Livewire\Livewire;
 
 test('users are notified when a deposit is credited and can mark notifications read', function () {
     $user = User::factory()->create();
-    $deposit = Deposit::factory()->for($user)->create(['amount_sats' => 2_500_000]);
+    $deposit = Deposit::factory()->for($user)->create(['coin_amount' => '2500']);
 
-    app(WalletService::class)->approveDeposit($deposit, User::factory()->admin()->create());
+    app(WalletService::class)->approveDeposit($deposit, User::factory()->admin()->create(), 2_500_000_000);
 
     $notification = $user->notifications()->sole();
     expect($notification->data['title'])->toBe('Deposit credited')
-        ->and($notification->data['body'])->toContain('0.025 BTC');
+        ->and($notification->data['body'])->toContain('2,500.00 USDT');
 
     $this->actingAs($user)->get(route('dashboard'))->assertSee(route('notifications'));
 
@@ -81,15 +81,15 @@ test('users cannot read other people\'s tickets or reply to closed ones', functi
 
 test('users can download their statement as CSV', function () {
     $user = User::factory()->create();
-    app(WalletService::class)->approveDeposit(Deposit::factory()->for($user)->create(['amount_sats' => 1_250_000]), User::factory()->admin()->create());
-    User::factory()->create()->ledgerEntries()->create(['type' => 'adjustment', 'amount_sats' => 999, 'balance_after_sats' => 999, 'description' => 'Someone else']);
+    app(WalletService::class)->approveDeposit(Deposit::factory()->for($user)->create(), User::factory()->admin()->create(), 1_250_500_000);
+    User::factory()->create()->ledgerEntries()->create(['type' => 'adjustment', 'amount_micros' => 999, 'balance_after_micros' => 999, 'description' => 'Someone else']);
 
     $response = $this->actingAs($user)->get(route('transactions.export'))->assertOk();
     $csv = $response->streamedContent();
 
-    expect($csv)->toContain('Date,Type,Details')
-        ->toContain('Deposit,"Deposit #')
-        ->toContain('0.01250000')
+    expect($csv)->toContain('Date,Type,Details,"Amount (USDT)"')
+        ->toContain('Deposit,"Deposit DP-0')
+        ->toContain('1250.500000')
         ->not->toContain('Someone else');
 });
 
@@ -98,9 +98,9 @@ test('the plan form shows admins what a customer would earn', function () {
         ->call('create')
         ->set('durationDays', 30)
         ->set('targetPercent', '3')
-        ->assertSee('Customer preview for 0.1 BTC')
-        ->assertSee('+0.003 BTC profit')
-        ->assertSee('0.103 BTC paid back after 30 days');
+        ->assertSee('Customer preview for 1,000 USDT')
+        ->assertSee('+30.00 USDT profit')
+        ->assertSee('1,030.00 USDT paid back after 30 days');
 
     expect(Plan::count())->toBe(0);
 });

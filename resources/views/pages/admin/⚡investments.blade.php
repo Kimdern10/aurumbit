@@ -97,9 +97,9 @@ new #[Title('Investments')] class extends Component {
                             <a href="{{ route('admin.users.show', $investment->user_id) }}" wire:navigate class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $investment->user->name }}</a>
                             <p class="text-xs text-zinc-500">{{ $investment->plan->name }}</p>
                         </flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$investment->amount_sats" /></flux:table.cell>
+                        <flux:table.cell><x-usdt :micros="$investment->amount_micros" /></flux:table.cell>
                         <flux:table.cell class="whitespace-nowrap text-xs">{{ $investment->starts_at->format('M j') }} → {{ $investment->ends_at->format('M j, Y') }}</flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$investment->earned_sats" /></flux:table.cell>
+                        <flux:table.cell><x-usdt :micros="$investment->earnedSoFar()" :decimals="4" /></flux:table.cell>
                         <flux:table.cell><flux:badge size="sm" :color="$investment->status->color()">{{ $investment->status->label() }}</flux:badge></flux:table.cell>
                         <flux:table.cell align="end">
                             @if ($investment->status === InvestmentStatus::Active)

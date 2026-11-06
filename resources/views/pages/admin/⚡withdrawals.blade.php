@@ -3,6 +3,7 @@
 use App\Enums\RequestStatus;
 use App\Exceptions\WalletException;
 use App\Models\Withdrawal;
+use App\Services\BybitAccount;
 use App\Services\WalletService;
 use Flux\Flux;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -27,6 +28,13 @@ new #[Title('Withdrawals')] class extends Component {
 
     public string $payoutTxid = '';
 
+    /**
+     * The Bybit payout found for the withdrawal being approved, if any.
+     *
+     * @var array{txid: string, amount: string, coin: string, chain: string}|null
+     */
+    public ?array $bybitPayout = null;
+
     public function updatedStatus(): void
     {
         $this->resetPage();
@@ -44,28 +52,51 @@ new #[Title('Withdrawals')] class extends Component {
             ->paginate(20);
     }
 
-    public function review(int $withdrawalId, string $decision): void
+    public function review(int $withdrawalId, string $decision, BybitAccount $bybit): void
     {
         $this->reviewingId = $withdrawalId;
         $this->decision = $decision === 'reject' ? 'reject' : 'approve';
         $this->note = '';
         $this->payoutTxid = '';
+        $this->bybitPayout = null;
         $this->resetValidation();
+
+        if ($this->decision === 'approve') {
+            $this->findBybitPayout($bybit);
+        }
+
         Flux::modal('review-withdrawal')->show();
+    }
+
+    /**
+     * Look in the Bybit withdrawal history for the payout to this customer's
+     * address and fill in its blockchain transaction ID.
+     */
+    public function findBybitPayout(BybitAccount $bybit): void
+    {
+        $bybit->refresh();
+        $this->bybitPayout = $bybit->findPayoutFor(Withdrawal::query()->findOrFail($this->reviewingId));
+
+        if ($this->bybitPayout) {
+            $this->payoutTxid = $this->bybitPayout['txid'];
+        }
     }
 
     public function confirm(WalletService $wallet): void
     {
-        $this->payoutTxid = strtolower(trim($this->payoutTxid));
+        $withdrawal = Withdrawal::query()->findOrFail($this->reviewingId);
+        $this->payoutTxid = $withdrawal->network->normalizeTxid($this->payoutTxid);
 
         $this->validate([
             'note' => [$this->decision === 'reject' ? 'required' : 'nullable', 'string', 'max:500'],
-            'payoutTxid' => [$this->decision === 'approve' ? 'required' : 'nullable', 'regex:/^[0-9a-f]{64}$/'],
-        ], [
-            'payoutTxid.regex' => __('Paste the 64-character transaction ID of the payment.'),
+            'payoutTxid' => ['nullable', 'string', 'max:120'],
         ]);
 
-        $withdrawal = Withdrawal::query()->findOrFail($this->reviewingId);
+        if ($this->decision === 'approve' && filled($this->payoutTxid) && ! $withdrawal->network->isValidTxid($this->payoutTxid)) {
+            $this->addError('payoutTxid', __($withdrawal->network->txidHint()));
+
+            return;
+        }
 
         try {
             if ($this->decision === 'reject') {
@@ -89,7 +120,7 @@ new #[Title('Withdrawals')] class extends Component {
     <div class="flex flex-wrap items-end justify-between gap-4">
         <div>
             <flux:heading size="xl">{{ __('Withdrawals') }}</flux:heading>
-            <flux:text class="mt-1">{{ __('Send the BTC from the company wallet first, then approve and paste the transaction ID. The site never sends coins by itself.') }}</flux:text>
+            <flux:text class="mt-1">{{ __('Send the coin shown from the company wallet first, then approve it here. The site never sends coins by itself.') }}</flux:text>
         </div>
         <flux:select wire:model.live="status" class="sm:max-w-48">
             <flux:select.option value="pending">{{ __('Pending') }}</flux:select.option>
@@ -116,13 +147,19 @@ new #[Title('Withdrawals')] class extends Component {
                             <a href="{{ route('admin.users.show', $withdrawal->user_id) }}" wire:navigate class="font-medium text-zinc-900 hover:underline dark:text-white">{{ $withdrawal->user->name }}</a>
                             <p class="text-xs text-zinc-500">{{ __('Identity:') }} {{ $withdrawal->user->kycStatus()?->label() ?? __('not sent') }}</p>
                         </flux:table.cell>
-                        <flux:table.cell><x-btc :sats="$withdrawal->amount_sats" class="font-medium" /></flux:table.cell>
+                        <flux:table.cell class="whitespace-nowrap">
+                            <span class="font-medium tabular-nums">{{ __('Send :amount', ['amount' => $withdrawal->payoutLabel()]) }}</span> <a href="{{ $withdrawal->receiptUrl(true) }}" class="font-mono text-[11px] text-brand-600 underline">{{ $withdrawal->code() }}</a>
+                            @if ($withdrawal->coin !== 'USDT')
+                                <p class="text-xs text-zinc-500"><x-usdt :micros="$withdrawal->amount_micros" />@if ($withdrawal->price_cents) {{ __('at :price USDT per :coin', ['price' => \App\Support\Usdt::format($withdrawal->price_cents * 10_000), 'coin' => $withdrawal->coin]) }}@endif</p>
+                            @endif
+                        </flux:table.cell>
                         <flux:table.cell class="max-w-56">
-                            <span class="block truncate font-mono text-xs" title="{{ $withdrawal->btc_address }}">{{ $withdrawal->btc_address }}</span>
+                            <flux:badge size="sm">{{ $withdrawal->network->label() }}</flux:badge>
+                            <span class="mt-1 block truncate font-mono text-xs" title="{{ $withdrawal->address }}">{{ $withdrawal->address }}</span>
                             @if ($withdrawal->status === RequestStatus::Pending)
-                                <button type="button" data-copy="{{ $withdrawal->btc_address }}" class="text-xs underline"><span data-copy-label>{{ __('Copy address') }}</span></button>
-                            @elseif ($withdrawal->payout_txid)
-                                <a href="{{ \App\Models\Setting::get('explorer_tx_url').$withdrawal->payout_txid }}" target="_blank" rel="noopener" class="text-xs underline">{{ __('View payment') }}</a>
+                                <button type="button" data-copy="{{ $withdrawal->address }}" class="text-xs underline"><span data-copy-label>{{ __('Copy address') }}</span></button>
+                            @elseif ($url = $withdrawal->payoutUrl())
+                                <a href="{{ $url }}" target="_blank" rel="noopener" class="text-xs underline">{{ __('View payment') }}</a>
                             @endif
                         </flux:table.cell>
                         <flux:table.cell class="whitespace-nowrap">{{ $withdrawal->created_at->format('M j, g:i A') }}</flux:table.cell>
@@ -152,8 +189,19 @@ new #[Title('Withdrawals')] class extends Component {
             @if ($decision === 'reject')
                 <flux:text class="text-sm">{{ __('The full amount goes back to the user\'s balance.') }}</flux:text>
             @else
-                <flux:text class="text-sm">{{ __('First send the exact amount to the user\'s address from the company wallet. Then paste the transaction ID here.') }}</flux:text>
-                <flux:input wire:model="payoutTxid" :label="__('Payment transaction ID')" class="font-mono" autocomplete="off" spellcheck="false" />
+                <flux:text class="text-sm">{{ __('Send the exact amount shown, in the coin and on the network shown, to the user\'s address from the company wallet.') }}</flux:text>
+                @if ($bybitPayout)
+                    <flux:callout color="green" icon="check-badge" data-bybit-payout>
+                        <flux:callout.text>{{ __('Found in your Bybit withdrawals: :amount :coin on :chain to this address. Its transaction ID is filled in below.', ['amount' => $bybitPayout['amount'], 'coin' => $bybitPayout['coin'], 'chain' => $bybitPayout['chain']]) }}</flux:callout.text>
+                    </flux:callout>
+                @elseif (app(BybitAccount::class)->isConfigured())
+                    <div class="flex flex-wrap items-center justify-between gap-2 rounded-lg bg-zinc-50 px-3 py-2 text-xs text-zinc-500 dark:bg-white/5">
+                        <span>{{ __('No Bybit payout to this address yet. Send it from Bybit, then check again.') }}</span>
+                        <flux:button size="xs" icon="arrow-path" wire:click="findBybitPayout">{{ __('Check Bybit again') }}</flux:button>
+                    </div>
+                @endif
+                <flux:input wire:model="payoutTxid" :label="__('Payment transaction ID (optional)')" class="font-mono" autocomplete="off" spellcheck="false"
+                    :description="__('Filled in automatically when the payout was sent from Bybit. Otherwise, in Bybit open Assets → History → Withdrawals, open the payout and copy its TxID (transaction hash).')" />
             @endif
             <flux:textarea wire:model="note" :label="$decision === 'reject' ? __('Reason (the user will see this)') : __('Note (optional)')" rows="3" />
             <div class="flex justify-end gap-2">

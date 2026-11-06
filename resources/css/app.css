@@ -163,6 +163,20 @@
     @apply  !mb-0 !leading-tight;
 }
 
+/*
+ * The page itself never scrolls sideways. Wide content such as tables scrolls
+ * inside its own box. clip (not hidden) keeps sticky headers working.
+ */
+html,
+body {
+    overflow-x: clip;
+}
+
+/* Auth pages: taller, softer fields to match the site's rounded buttons. */
+[data-auth-form] input[data-flux-control] {
+    @apply h-11 rounded-xl;
+}
+
 input:focus[data-flux-control],
 textarea:focus[data-flux-control],
 select:focus[data-flux-control] {
