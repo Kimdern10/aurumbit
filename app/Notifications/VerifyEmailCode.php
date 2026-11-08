@@ -5,6 +5,7 @@ namespace App\Notifications;
 use App\Models\Setting;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
+use Illuminate\Support\HtmlString;
 
 /**
  * Emails the six-digit code a new user types in to verify their email address.
@@ -31,7 +32,7 @@ class VerifyEmailCode extends Notification
             ->subject(__(':code is your :site verification code', ['code' => $this->code, 'site' => $siteName]))
             ->greeting(__('Verify your email'))
             ->line(__('Enter this code on the :site verification page to open your account:', ['site' => $siteName]))
-            ->line('**'.chunk_split($this->code, 3, ' ').'**')
+            ->line(new HtmlString('<div class="code-box">'.e(trim(chunk_split($this->code, 3, ' '))).'</div>'))
             ->line(__('The code works for :minutes minutes. If you did not create an account, you can ignore this email.', ['minutes' => $this->minutesValid]));
     }
 }
