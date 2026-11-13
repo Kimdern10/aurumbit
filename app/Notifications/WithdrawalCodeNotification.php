@@ -3,15 +3,20 @@
 namespace App\Notifications;
 
 use App\Models\Setting;
+use Illuminate\Bus\Queueable;
+use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Notifications\Messages\MailMessage;
 use Illuminate\Notifications\Notification;
 use Illuminate\Support\HtmlString;
 
 /**
  * Emails the six-digit code that confirms a withdrawal.
+ * Queued, so the page answers straight away and the email follows.
  */
-class WithdrawalCodeNotification extends Notification
+class WithdrawalCodeNotification extends Notification implements ShouldQueue
 {
+    use Queueable;
+
     public function __construct(public string $code, public int $minutesValid) {}
 
     /**

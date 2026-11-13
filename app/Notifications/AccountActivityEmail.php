@@ -10,8 +10,8 @@ use Illuminate\Notifications\Notification;
 
 /**
  * The email copy of an AccountActivity notification, e.g. "Deposit credited".
- * Queued, so with a real queue (QUEUE_CONNECTION=database plus a worker) the
- * email is sent in the background instead of during the page request.
+ * Queued: with QUEUE_CONNECTION=deferred it is sent after the page has been
+ * returned to the user, so nobody waits on the mail server.
  */
 class AccountActivityEmail extends Notification implements ShouldQueue
 {
